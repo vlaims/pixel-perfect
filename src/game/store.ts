@@ -5,6 +5,7 @@ export type CrosshairType = "dot" | "cross" | "inverted";
 
 export interface Settings {
   crosshair: CrosshairType;
+  gameMode: "vehicle-only" | "ffa";
   crossSize: number;
   outline: number;
   color: string;
@@ -74,6 +75,7 @@ function createStore<T extends object>(initial: T) {
 
 export const settingsStore = createStore<Settings>({
   crosshair: "dot",
+  gameMode: "vehicle-only",
   crossSize: 6,
   outline: 1,
   color: "#ffffff",
