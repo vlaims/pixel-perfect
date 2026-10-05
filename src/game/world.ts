@@ -212,14 +212,14 @@ export function buildWorld(scene: THREE.Scene) {
        transformed.z += cos(uTime * 1.3 + ph) * 0.08 * uv.y;`,
     );
   };
-  const COUNT = 3200;
+  const COUNT = 1400;
   const grassMesh = new THREE.InstancedMesh(clumpGeo, grassMat, COUNT);
   const mtx = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const sc = new THREE.Vector3();
   const ps = new THREE.Vector3();
   let n = 0;
-  for (let c = 0; c < 70 && n < COUNT; c++) {
+  for (let c = 0; c < 36 && n < COUNT; c++) {
     const cx = (rand() - 0.5) * 170;
     const cz = (rand() - 0.5) * 170;
     const r = 3 + rand() * 6;
