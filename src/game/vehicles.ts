@@ -31,10 +31,10 @@ export class Vehicle {
     this.yaw = yaw;
     this.group.add(this.body);
     this.door.position.set(kind === "car" ? 0.98 : 0, kind === "car" ? 0.72 : 0, kind === "car" ? 0.15 : 0);
-    const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.4 });
-    const dark = new THREE.MeshStandardMaterial({ color: "#1b1b1f", roughness: 0.8 });
-    const glass = new THREE.MeshStandardMaterial({ color: "#2b3c4a", roughness: 0.1, metalness: 0.6 });
-    const chrome = new THREE.MeshStandardMaterial({ color: "#c9c9c9", roughness: 0.2, metalness: 0.9 });
+    const paint = new THREE.MeshLambertMaterial({ color });
+    const dark = new THREE.MeshLambertMaterial({ color: "#1b1b1f" });
+    const glass = new THREE.MeshLambertMaterial({ color: "#2b3c4a" });
+    const chrome = new THREE.MeshLambertMaterial({ color: "#777777" });
     const light = new THREE.MeshBasicMaterial({ color: "#fff3c4" });
     const tail = new THREE.MeshBasicMaterial({ color: "#d01818" });
     const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, zz: number, parent: THREE.Object3D = this.body) => {
