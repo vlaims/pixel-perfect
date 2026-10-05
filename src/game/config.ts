@@ -41,7 +41,7 @@ export const MOVE = {
   STUTTER_MULT: 1.15,
   STUTTER_WINDOW: 0.3,
   ROLL_TIME: 0.6,
-  ROLL_SPEED: 7.5,
+  ROLL_SPEED: 9.2,
   LAG: 0.05,
   GRAVITY: 25,
   STEP: 0.6,
