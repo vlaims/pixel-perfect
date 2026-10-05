@@ -182,7 +182,7 @@ export function Game() {
         <span style={{ background: settings.centerColor }} />
       </div>
 
-      {hud.hit && <div key={hud.hit.id} className={`game-hitmarker ${hud.hit.zone === "head" ? "head" : ""}`}>X</div>}
+      {hud.hit && <div key={hud.hit.id} className={`game-hitmarker ${hud.hit.zone === "head" ? "head" : ""}`} aria-hidden="true"><i/><i/><i/><i/></div>}
 
       <div className="game-fps">FPS <strong ref={(el) => { if (el && engineRef.current) engineRef.current.fpsEl = el; }}>--</strong></div>
 
