@@ -857,7 +857,9 @@ export class Engine {
 
     // vehicles
     for (const v of this.vehicles) {
+      const wasDriver = v.driver;
       v.updateEntry(dt);
+      if (v.driver && v.driver.weapon === "ar" && v.driver !== wasDriver) this.switchWeapon(v.driver, "pistol");
       const inp = v.driver ? v.driver.input : emptyInput();
       v.update(inp, dt, this.boxes, this.vehicles);
       if (v.driver) {
@@ -1011,7 +1013,7 @@ export class Engine {
       const hand = a.rig.getBone("RightHand");
       for (const w of ["ar", "pistol"] as const) {
         const g = a.guns[w];
-        g.visible = a.weapon === w && a.alive;
+        g.visible = a.weapon === w && a.alive && !(a.vehicle && a.vehicle.kind === "car");
         if (!g.visible || !hand) continue;
         hand.getWorldPosition(g.position);
         const gy = a.aimBlend > 0.5 ? a.aimYaw : a.root.rotation.y;
