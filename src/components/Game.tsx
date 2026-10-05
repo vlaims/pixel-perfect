@@ -18,6 +18,15 @@ export function Game() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const hitId = hud.hit?.id;
+    if (hitId == null) return;
+    const timer = window.setTimeout(() => {
+      if (hudStore.get().hit?.id === hitId) hudStore.set({ hit: null });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [hud.hit]);
+
+  useEffect(() => {
     try {
       const saved = localStorage.getItem("pixel-perfect-settings");
       if (!saved) return;
