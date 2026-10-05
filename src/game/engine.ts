@@ -449,8 +449,10 @@ export class Engine {
     for (const pane of this.glassMeshes) {
       if (!pane.visible) continue;
       pane.updateMatrixWorld(true);
+      pane.geometry.computeBoundingBox();
+      if (!pane.geometry.boundingBox) continue;
       const localRay = ray.clone().applyMatrix4(pane.matrixWorld.clone().invert());
-      const localHit = localRay.intersectBox(new THREE.Box3().setFromObject(pane), hitPoint);
+      const localHit = localRay.intersectBox(pane.geometry.boundingBox, hitPoint);
       if (localHit) {
         const worldHit = hitPoint.clone().applyMatrix4(pane.matrixWorld);
         const t = worldHit.distanceTo(origin);
