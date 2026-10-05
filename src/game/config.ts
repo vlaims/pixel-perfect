@@ -21,7 +21,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     auto: true,
     reload: 1.8,
     dmg: { head: 200, body: 34, legs: 15 },
-    sound: "fire",
+    sound: "shoot",
   },
   pistol: {
     id: "pistol",
