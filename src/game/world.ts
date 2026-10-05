@@ -405,109 +405,65 @@ export function buildWorld(scene: THREE.Scene) {
   crowns.instanceMatrix.needsUpdate = true;
   scene.add(trunks, crowns);
 
-  // ----- Parked cars -----
-  const carBodyGeo = new THREE.BoxGeometry(1.9, 0.46, 3.8);
-  const carCabGeo = new THREE.BoxGeometry(1.45, 0.43, 1.7);
-  const carWheelGeo = new THREE.CylinderGeometry(0.30, 0.30, 0.18, 10);
-  carWheelGeo.rotateZ(Math.PI / 2);
-  const parkedBody = makeInstanced(carBodyGeo, new THREE.MeshLambertMaterial({ color: "#607080" }), 72);
-  const parkedCab = makeInstanced(carCabGeo, glass, 72);
-  const parkedWheel = makeInstanced(carWheelGeo, darkConcrete, 288);
-  const parkedColors = ["#b5423b","#3d6ea8","#d2aa2b","#8d9296","#454b52","#ecebe3","#724f75","#3b715d","#7f694f"];
+  // ----- Low-cost Zona Leste visual details -----
+  // Overhead utility wiring gives the streets a denser residential/commercial silhouette.
+  const wireMat = new THREE.LineBasicMaterial({ color: "#2b2c2d", transparent: true, opacity: 0.72 });
+  for (const x of [-96, -48, 0, 48, 96]) {
+    const pts = [];
+    for (let i = -4; i <= 4; i++) pts.push(new THREE.Vector3(x + 0.55, 5.0, i * 48));
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const line = new THREE.Line(geo, wireMat);
+    line.frustumCulled = false;
+    scene.add(line);
+  }
+  for (const z of [-96, -48, 0, 48, 96]) {
+    const pts = [];
+    for (let i = -4; i <= 4; i++) pts.push(new THREE.Vector3(i * 48, 4.95, z - 0.55));
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const line = new THREE.Line(geo, wireMat);
+    line.frustumCulled = false;
+    scene.add(line);
+  }
 
-  let pi = 0;
-  let wi = 0;
-  const addParkedCar = (x: number, z: number, yaw: number) => {
-    if (pi >= parkedBody.count) return;
-    mq.setFromAxisAngle(new THREE.Vector3(0,1,0), yaw);
-    mi.compose(new THREE.Vector3(x, 0.4, z), mq, ms);
-    parkedBody.setMatrixAt(pi, mi);
-    parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length]));
-
-    const cab = localToWorld(x, z, yaw, 0, -0.25);
-    mi.compose(new THREE.Vector3(cab.x, 0.82, cab.z), mq, ms);
-    parkedCab.setMatrixAt(pi, mi);
-
-    for (const [lx,lz] of [[-0.86,1.15],[0.86,1.15],[-0.86,-1.15],[0.86,-1.15]]) {
-      const p = localToWorld(x, z, yaw, lx, lz);
-      mi.compose(new THREE.Vector3(p.x,0.24,p.z),mq,ms);
-      parkedWheel.setMatrixAt(wi++,mi);
-    }
-    pi++;
-  };
-
-  for (const z of [-108,-84,-60,-36,-12,12,36,60,84,108]) {
-    for (const x of roadCenters) {
-      if (pi >= 72) break;
-      addParkedCar(x + (pi % 2 ? 3.7 : -3.7), z, pi % 2 ? 0 : Math.PI);
+  // Small utility boxes, rooftop tanks and AC units break up the repeated block silhouettes.
+  const utilityGeo = new THREE.BoxGeometry(0.55, 0.75, 0.35);
+  const utilityMat = new THREE.MeshLambertMaterial({ color: "#50545a" });
+  const tankGeo = new THREE.CylinderGeometry(0.62, 0.62, 1.15, 10);
+  const tankMat = new THREE.MeshLambertMaterial({ color: "#555a5d" });
+  const acGeo = new THREE.BoxGeometry(0.52, 0.34, 0.18);
+  const acMat = new THREE.MeshLambertMaterial({ color: "#b4b4ad" });
+  let detailIndex = 0;
+  for (const bx0 of blockCenters) {
+    for (const bz0 of blockCenters) {
+      const roofY = 18 + (detailIndex % 5) * 2;
+      addMesh(scene, tankGeo, tankMat, bx0 + 5.5, roofY, bz0 - 4.5);
+      addMesh(scene, utilityGeo, utilityMat, bx0 - 5.5, 1.1, bz0 + 5.5);
+      addMesh(scene, acGeo, acMat, bx0 + 6.8, 2.4, bz0 - 6.0, 1, 1, 1, Math.PI / 2);
+      detailIndex++;
     }
   }
-  for (const x of [-108,-84,-60,-36,-12,12,36,60,84,108]) {
-    for (const z of roadCenters) {
-      if (pi >= 72) break;
-      addParkedCar(x, z + (pi % 2 ? 3.7 : -3.7), pi % 2 ? Math.PI/2 : -Math.PI/2);
-    }
+
+  // Short perimeter walls and storefront fences, using a small number of reusable meshes.
+  const fenceMat = new THREE.MeshLambertMaterial({ color: "#4c4e50" });
+  const wallMat = new THREE.MeshLambertMaterial({ color: "#5d5d58" });
+  const fenceGeo = new THREE.BoxGeometry(0.08, 1.25, 4.5);
+  const wallGeo = new THREE.BoxGeometry(4.6, 1.1, 0.16);
+  for (let i = 0; i < 16; i++) {
+    const x = -98 + (i % 4) * 64 + (rand() - 0.5) * 8;
+    const z = -74 + Math.floor(i / 4) * 48;
+    addMesh(scene, fenceGeo, fenceMat, x, 0.62, z, 1, 1, 1, rand() > 0.5 ? 0 : Math.PI / 2);
+    if (i % 2 === 0) addMesh(scene, wallGeo, wallMat, x + 2.8, 0.55, z + 2.1, 1, 1, 1, 0);
   }
-  parkedBody.count = pi;
-  parkedCab.count = pi;
-  parkedWheel.count = wi;
-  parkedBody.instanceMatrix.needsUpdate = true;
-  parkedCab.instanceMatrix.needsUpdate = true;
-  parkedWheel.instanceMatrix.needsUpdate = true;
-  parkedBody.instanceColor.needsUpdate = true;
-  scene.add(parkedBody, parkedCab, parkedWheel);
 
-  // ----- Motorcycles everywhere -----
-  const motoBodyGeo = new THREE.BoxGeometry(0.36, 0.25, 1.4);
-  const motoSeatGeo = new THREE.BoxGeometry(0.40, 0.12, 0.5);
-  const motoWheelGeo = new THREE.CylinderGeometry(0.27, 0.27, 0.10, 9);
-  motoWheelGeo.rotateZ(Math.PI / 2);
-  const motoBarGeo = new THREE.BoxGeometry(0.58, 0.055, 0.06);
-  const motoBody = makeInstanced(motoBodyGeo, new THREE.MeshLambertMaterial({ color: "#7b2d3b" }), 78);
-  const motoSeat = makeInstanced(motoSeatGeo, darkConcrete, 78);
-  const motoWheel = makeInstanced(motoWheelGeo, darkConcrete, 156);
-  const motoBar = makeInstanced(motoBarGeo, concrete, 78);
-  const motoColors = ["#c0393d","#d4a52e","#325c96","#3d745a","#45474a","#8a5d32","#7e3e68"];
-  let pbi = 0;
-  let pbw = 0;
-
-  const addMoto = (x: number, z: number, yaw: number) => {
-    if (pbi >= motoBody.count) return;
-    mq.setFromAxisAngle(new THREE.Vector3(0,1,0), yaw);
-    mi.compose(new THREE.Vector3(x,0.46,z),mq,ms);
-    motoBody.setMatrixAt(pbi,mi);
-    motoBody.setColorAt(pbi,new THREE.Color(motoColors[pbi % motoColors.length]));
-    const seat = localToWorld(x,z,yaw,0,-0.12);
-    mi.compose(new THREE.Vector3(seat.x,0.66,seat.z),mq,ms);
-    motoSeat.setMatrixAt(pbi,mi);
-    const bar = localToWorld(x,z,yaw,0,0.63);
-    mi.compose(new THREE.Vector3(bar.x,0.92,bar.z),mq,ms);
-    motoBar.setMatrixAt(pbi,mi);
-    for (const lz of [-0.68,0.66]) {
-      const wp = localToWorld(x,z,yaw,0,lz);
-      mi.compose(new THREE.Vector3(wp.x,0.27,wp.z),mq,ms);
-      motoWheel.setMatrixAt(pbw++,mi);
-    }
-    pbi++;
-  };
-
-  for (const z of [-102,-78,-54,-30,-6,18,42,66,90,114]) {
-    for (const x of [-104,-80,-56,-32,-8,16,40,64,88,112]) {
-      if (pbi >= 78) break;
-      addMoto(x + (pbi % 2 ? 4.3 : -4.3), z, Math.PI/2);
-    }
-    if (pbi >= 78) break;
+  // Simple road signage / shop accents.
+  const signPostGeo = new THREE.CylinderGeometry(0.025, 0.03, 1.7, 6);
+  const signGeo2 = new THREE.BoxGeometry(0.65, 0.4, 0.04);
+  const signPostMat = new THREE.MeshBasicMaterial({ color: "#5b5e60" });
+  const signMat = new THREE.MeshLambertMaterial({ color: "#d7d0bc" });
+  for (const [x, z, yaw] of [[-101,-16,0],[-53,32,Math.PI/2],[43,-64,0],[91,80,Math.PI/2]]) {
+    addMesh(scene, signPostGeo, signPostMat, x, 0.85, z);
+    addMesh(scene, signGeo2, signMat, x, 1.72, z, 1, 1, 1, yaw);
   }
-  motoBody.count = pbi;
-  motoSeat.count = pbi;
-  motoBar.count = pbi;
-  motoWheel.count = pbw;
-  motoBody.instanceMatrix.needsUpdate = true;
-  motoSeat.instanceMatrix.needsUpdate = true;
-  motoBar.instanceMatrix.needsUpdate = true;
-  motoWheel.instanceMatrix.needsUpdate = true;
-  motoBody.instanceColor.needsUpdate = true;
-  scene.add(motoBody,motoSeat,motoBar,motoWheel);
 
   // Alley clutter: dumpsters and barriers.
   const dumpGeo = new THREE.BoxGeometry(1,1,1);
