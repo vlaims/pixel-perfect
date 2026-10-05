@@ -180,8 +180,8 @@ export class Engine {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.renderer.shadowMap.enabled = false;
+    this.renderer.shadowMap.autoUpdate = false;
     this.post = new PostPass(16, 16);
 
     const sky = new THREE.Color("#9cc4e4");
@@ -189,8 +189,7 @@ export class Engine {
     this.scene.fog = new THREE.Fog("#b9d3e6", 60, 220);
     this.scene.add(new THREE.HemisphereLight("#cfe6ff", "#5a6b3a", 1.1));
     this.sun = new THREE.DirectionalLight("#fff1d6", 2.4);
-    this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.castShadow = false;
     const sc = this.sun.shadow.camera;
     sc.left = sc.bottom = -45;
     sc.right = sc.top = 45;
@@ -270,7 +269,7 @@ export class Engine {
   resize(w: number, h: number, pr: number) {
     this.width = w;
     this.height = h;
-    this.renderer.setPixelRatio(pr);
+    this.renderer.setPixelRatio(Math.min(pr, 1.25));
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -817,7 +816,7 @@ export class Engine {
     const now = performance.now();
     const raw = (now - this.last) / 1000;
     this.last = now;
-    const dt = Math.min(raw, 0.05);
+    const dt = Math.min(raw, 0.033);
     this.time += dt;
 
     // fps
