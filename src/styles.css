@@ -211,6 +211,7 @@ to{opacity:0;transform:translate(-50%,-50%) scale(1.12)}}
 .game-hitmarker i:nth-child(3){left:0;bottom:2px;transform:rotate(-45deg);transform-origin:left center}
 .game-hitmarker i:nth-child(4){right:0;bottom:2px;transform:rotate(45deg);transform-origin:right center}
 .game-hitmarker.head i{background:#ef2b2b}
+.game-hitmarker:not(.head) i{background:#fff}
 @keyframes hitFade{
   from{opacity:1}
   to{opacity:0}
