@@ -136,13 +136,6 @@ export function buildWorld(scene: THREE.Scene) {
     m.frustumCulled = false;
   }
 
-  // Secondary narrower streets between the avenues.
-  const sideCenters = [-72, -24, 24, 72];
-  const sideRoadX = new THREE.PlaneGeometry(7.5, 250);
-  const sideRoadZ = new THREE.PlaneGeometry(250, 7.5);
-  for (const x of sideCenters) addMesh(scene, sideRoadX, asphaltPatch, x, 0.014, 0);
-  for (const z of sideCenters) addMesh(scene, sideRoadZ, asphaltPatch, 0, 0.016, z);
-
   // Sidewalk bands.
   const walkX = new THREE.BoxGeometry(2.0, 0.14, 250);
   const walkZ = new THREE.BoxGeometry(250, 0.14, 2.0);
@@ -255,61 +248,112 @@ export function buildWorld(scene: THREE.Scene) {
   }
 
   // ----- Buildings / storefronts -----
+  // Four-by-four city blocks between the five main avenues.
   const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
   const roofGeo = new THREE.BoxGeometry(1, 0.12, 1);
-  const windowGeo = new THREE.BoxGeometry(0.6, 0.35, 0.04);
-  const awningGeo = new THREE.BoxGeometry(1, 0.12, 0.35);
-  const colors = ["#686b6d", "#756d63", "#5c6265", "#827970", "#5f5c59", "#777b79", "#6b625e", "#4f575a"];
+  const windowGeo = new THREE.BoxGeometry(0.58, 0.34, 0.05);
+  const doorGeo = new THREE.BoxGeometry(0.9, 1.8, 0.08);
+  const awningGeo = new THREE.BoxGeometry(1, 0.12, 0.45);
+  const signGeo = new THREE.BoxGeometry(2.8, 0.45, 0.08);
+  const colors = ["#676a6d","#756d63","#5d6367","#81786f","#625d59","#747a78","#6b625c","#50585c"];
 
-  // Each 48x48 block gets a landmark-like main building plus a smaller shop.
-  for (let gx = -96; gx <= 96; gx += 48) {
-    for (let gz = -96; gz <= 96; gz += 48) {
-      const roadGap = 9.5;
-      const bx = gx + (rand() > 0.5 ? -roadGap : roadGap);
-      const bz = gz + (rand() > 0.5 ? -roadGap : roadGap);
-      const w = 16 + rand() * 8;
-      const d = 15 + rand() * 8;
-      const h = 8 + rand() * 20;
-      const mat = new THREE.MeshLambertMaterial({ color: colors[Math.floor(rand() * colors.length)] });
-      addBox(scene, buildingGeo, mat, bx, h / 2, bz, w, h, d, rand() > 0.5 ? 0.03 : -0.03, boxes, true);
-      addBox(scene, roofGeo, roof, bx, h + 0.06, bz, w + 0.12, 1, d + 0.12, 0);
+  function addBuilding(
+    x:number,z:number,w:number,d:number,h:number,mat:THREE.Material,front:number
+  ) {
+    addBox(scene,buildingGeo,mat,x,h/2,z,w,h,d,0,boxes,true);
+    addBox(scene,roofGeo,roof,x,h+0.06,z,w+0.12,1,d+0.12,0);
 
-      // Window grid on the road-facing edge.
-      const front = bz - d / 2 - 0.025;
-      const rows = Math.max(2, Math.min(5, Math.floor(h / 4)));
-      const cols = Math.max(3, Math.min(6, Math.floor(w / 3)));
-      for (let r = 0; r < rows; r++) {
-        for (let col = 0; col < cols; col++) {
-          const px = bx - w / 2 + (col + 0.6) * (w / cols);
-          const py = 2.0 + r * 3.2;
-          if (py > h - 1) continue;
-          addMesh(scene, windowGeo, glassLight, px, py, front, 1, 1, 1);
-        }
+    // Front facade points toward the nearby street.
+    if(front===0){
+      const fz=z-d/2-0.04;
+      const rows=Math.max(2,Math.min(6,Math.floor(h/3.6)));
+      const cols=Math.max(2,Math.min(6,Math.floor(w/2.8)));
+      for(let r=0;r<rows;r++) for(let col=0;col<cols;col++){
+        const px=x-w/2+(col+0.55)*(w/cols);
+        const py=1.9+r*3.0;
+        if(py<h-1.1) addMesh(scene,windowGeo,glassLight,px,py,fz);
       }
-
-      // A low shop tucked into a different corner of the block.
-      if (rand() > 0.22) {
-        const sx = gx + (rand() - 0.5) * 15;
-        const sz = gz + (rand() - 0.5) * 15;
-        const sw = 6 + rand() * 4;
-        const sd = 5 + rand() * 3;
-        const sh = 3.2 + rand() * 1.4;
-        const shopMat = rand() > 0.5 ? stucco : plaster;
-        addBox(scene, buildingGeo, shopMat, sx, sh / 2, sz, sw, sh, sd, 0, boxes, true);
-        addMesh(scene, awningGeo, red, sx, sh - 0.25, sz - sd / 2 - 0.12, sw * 0.7, 1, 1, 0);
-        addMesh(scene, windowGeo, glass, sx, 1.55, sz - sd / 2 - 0.05, sw * 0.65, 1.4, 1);
+      if(h<9){
+        addMesh(scene,doorGeo,darkConcrete,x,0.9,fz-0.015);
+        addMesh(scene,awningGeo,red,x,2.45,fz-0.22,w*0.65,1,1,0);
+        addMesh(scene,signGeo,red,x,2.85,fz-0.03,Math.min(2.8,w*0.5),1,1,0);
+      }
+    } else if(front===1){
+      const fz=z+d/2+0.04;
+      const rows=Math.max(2,Math.min(6,Math.floor(h/3.6)));
+      const cols=Math.max(2,Math.min(6,Math.floor(w/2.8)));
+      for(let r=0;r<rows;r++) for(let col=0;col<cols;col++){
+        const px=x-w/2+(col+0.55)*(w/cols);
+        const py=1.9+r*3.0;
+        if(py<h-1.1) addMesh(scene,windowGeo,glassLight,px,py,fz);
+      }
+      if(h<9){
+        addMesh(scene,doorGeo,darkConcrete,x,0.9,fz+0.015);
+        addMesh(scene,awningGeo,red,x,2.45,fz+0.22,w*0.65,1,1,0);
+        addMesh(scene,signGeo,red,x,2.85,fz+0.03,Math.min(2.8,w*0.5),1,1,0);
+      }
+    } else if(front===2){
+      const fx=x-w/2-0.04;
+      const rows=Math.max(2,Math.min(6,Math.floor(h/3.6)));
+      const cols=Math.max(2,Math.min(6,Math.floor(d/2.8)));
+      for(let r=0;r<rows;r++) for(let col=0;col<cols;col++){
+        const pz=z-d/2+(col+0.55)*(d/cols);
+        const py=1.9+r*3.0;
+        if(py<h-1.1) addMesh(scene,windowGeo,glassLight,fx,py,pz,1,1,1,Math.PI/2);
+      }
+    } else {
+      const fx=x+w/2+0.04;
+      const rows=Math.max(2,Math.min(6,Math.floor(h/3.6)));
+      const cols=Math.max(2,Math.min(6,Math.floor(d/2.8)));
+      for(let r=0;r<rows;r++) for(let col=0;col<cols;col++){
+        const pz=z-d/2+(col+0.55)*(d/cols);
+        const py=1.9+r*3.0;
+        if(py<h-1.1) addMesh(scene,windowGeo,glassLight,fx,py,pz,1,1,1,Math.PI/2);
       }
     }
   }
 
-  // A low-rise residential edge gives the map the dense mixed-scale silhouette.
-  for (let i = 0; i < 22; i++) {
-    const x = (rand() < 0.5 ? -1 : 1) * (98 + rand() * 15);
-    const z = (rand() - 0.5) * 205;
-    const w = 5 + rand() * 5;
-    const d = 6 + rand() * 6;
-    const h = 3 + rand() * 4;
-    addBox(scene, buildingGeo, rand() > 0.5 ? brick : stucco, x, h / 2, z, w, h, d, 0, boxes, true);
+  // Fill each block with a large structure + smaller attached buildings.
+  const blockCenters=[-67.5,-22.5,22.5,67.5];
+  let blockIndex=0;
+  for(const bx0 of blockCenters){
+    for(const bz0 of blockCenters){
+      const variant=blockIndex++%4;
+      const mainW=variant===0?15:variant===1?12:14;
+      const mainD=variant===2?15:12;
+      const mainH=10+rand()*15;
+      const sx=bx0+(variant%2?7:-7);
+      const sz=bz0+(variant%2?-7:7);
+      const mainMat=new THREE.MeshLambertMaterial({color:colors[variant%colors.length]});
+      addBuilding(sx,sz,mainW,mainD,mainH,mainMat,variant%4);
+
+      const shopX=bx0-(variant%2?7:-7);
+      const shopZ=bz0-(variant%2?-7:7);
+      const shopW=9+rand()*3;
+      const shopD=7+rand()*3;
+      const shopH=4.5+rand()*2.0;
+      addBuilding(shopX,shopZ,shopW,shopD,shopH,variant%2?stucco:plaster,(variant+2)%4);
+
+      // Compact residential annex closes the remaining open side of the block.
+      const annX=bx0+(variant===0||variant===3?-9:9);
+      const annZ=bz0+(variant===0||variant===3?9:-9);
+      const annW=6.5+rand()*2.0;
+      const annD=5.5+rand()*2.0;
+      const annH=5+rand()*3;
+      addBuilding(annX,annZ,annW,annD,annH,variant%2?brick:stucco,(variant+1)%4);
+    }
+  }
+
+  // Narrow row-houses around the outside of the playable city.
+  for(let i=0;i<28;i++){
+    const side=i%4;
+    const along=-105+(i%7)*32+(rand()-0.5)*6;
+    let x=0,z=0;
+    if(side===0){x=106;z=along}
+    if(side===1){x=-106;z=along}
+    if(side===2){x=along;z=106}
+    if(side===3){x=along;z=-106}
+    addBuilding(x,z,7,7,3.5+rand()*3,rand()>0.5?brick:stucco,side%4);
   }
 
   // ----- Street furniture -----
