@@ -392,7 +392,6 @@ export function buildWorld(scene: THREE.Scene) {
       const side = pi % 2 === 0 ? -3.8 : 3.8;
       const p = { x: x + side, z };
       mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
       mi.compose(new THREE.Vector3(p.x, 0.42, p.z), mq, new THREE.Vector3(1, 1, 1));
       parkedBody.setMatrixAt(pi, mi);
       if (parkedBody.setColorAt) parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length]));
@@ -417,9 +416,10 @@ export function buildWorld(scene: THREE.Scene) {
       const yaw = Math.PI / 2;
       const side = pi % 2 === 0 ? -3.8 : 3.8;
       const p = { x, z: z + side };
+      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
       mi.compose(new THREE.Vector3(p.x, 0.42, p.z), mq, new THREE.Vector3(1, 1, 1));
       parkedBody.setMatrixAt(pi, mi);
-      if (parkedBody.setColorAt) parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length])));
+      if (parkedBody.setColorAt) parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length]));
       const cab = localToWorld(p.x, p.z, yaw, 0, -0.25);
       mi.compose(new THREE.Vector3(cab.x, 0.84, cab.z), mq, new THREE.Vector3(1, 1, 1));
       parkedCab.setMatrixAt(pi, mi);
