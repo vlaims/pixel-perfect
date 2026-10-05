@@ -197,10 +197,10 @@ export function Game() {
 
       <div
         className={`game-crosshair ${settings.crosshair}`}
-        style={{ width: settings.crosshair === "cross" ? 18 : settings.crossSize, height: settings.crosshair === "cross" ? 18 : settings.crossSize, color: settings.centerColor, border: settings.crosshair === "cross" || settings.crosshair === "inverted" ? "0" : `${settings.outline}px solid ${settings.borderColor}`, ["--crosshair-dot-size" as any]: `${settings.crossSize}px`, ["--crosshair-outline" as any]: `${settings.outline}px`, ["--crosshair-outline-color" as any]: settings.borderColor }}
+        style={{ width: settings.crosshair === "cross" ? 18 : settings.crossSize, height: settings.crosshair === "cross" ? 18 : settings.crossSize, color: "#ffffff", border: "0", ["--crosshair-dot-size" as any]: `${settings.crossSize}px` }}
         aria-hidden="true"
       >
-        <span style={{ background: settings.centerColor }} />
+        <span style={{ background: "#ffffff" }} />
       </div>
 
       {hud.hit && <div key={hud.hit.id} className={`game-hitmarker ${hud.hit.zone === "head" ? "head" : ""}`} aria-hidden="true"><i/><i/><i/><i/></div>}
