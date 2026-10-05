@@ -8,6 +8,7 @@ import { Vehicle } from "./vehicles";
 import { PostPass } from "./post";
 import { Sfx } from "./audio";
 import { hudStore, settingsStore } from "./store";
+import { loadBloodFxDat, selectBloodFx, type BloodFxConfig } from "./bloodfx";
 
 export interface Input {
   f: number;
@@ -19,9 +20,10 @@ export interface Input {
   shootPressed: boolean;
   rollPressed: boolean;
   radio: boolean;
+  sprint: boolean;
 }
 
-const emptyInput = (): Input => ({ f: 0, b: 0, l: 0, r: 0, scope: false, shoot: false, shootPressed: false, rollPressed: false, radio: false });
+const emptyInput = (): Input => ({ f: 0, b: 0, l: 0, r: 0, scope: false, shoot: false, shootPressed: false, rollPressed: false, radio: false, sprint: false });
 
 interface Brain {
   target: Actor | null;
@@ -78,6 +80,7 @@ export class Actor {
   flashT = 0;
   brain: Brain | null = null;
   input: Input = emptyInput();
+  entering = 0;
   lastAttacker: Actor | null = null;
 
   constructor(id: number, name: string, isPlayer: boolean, rig: Rig, flashMat: THREE.SpriteMaterial) {
@@ -162,8 +165,7 @@ export class Engine {
   sun: THREE.DirectionalLight;
   grassTime: { value: number } = { value: 0 };
   tracers: Tracer[] = [];
-  confetti: Confetti[] = [];
-  confettiMesh: THREE.InstancedMesh;
+  bloodFx!: BloodFxConfig;
   fpsEl: HTMLElement | null = null;
   fpsFrames = 0;
   fpsT = 0;
@@ -237,6 +239,7 @@ export class Engine {
       loader.loadAsync(modelUrl),
       ...Object.entries(sounds).map(([k, u]) => this.sfx.load(k, u)),
     ]);
+    this.bloodFx = await loadBloodFxDat();
     const norm = computeNorm(gltf.scene);
     const tints = [null, "#ff9a9a", "#9ab8ff", "#b8ff9a", "#ffe29a", "#e19aff", "#9affef", "#ffc29a", "#cccccc"];
     for (let i = 0; i < 9; i++) {
@@ -420,7 +423,7 @@ export class Engine {
     const muzzle = a.guns[a.weapon].getWorldPosition(tv2);
     this.addTracer(muzzle, end);
     if (hitActor) {
-      this.damage(hitActor, w.dmg[zone], a, zone === "head");
+      this.damage(hitActor, w.dmg[zone], a, zone === "head", zone);
     }
   }
 
@@ -459,7 +462,7 @@ export class Engine {
     return { t, zone };
   }
 
-  damage(target: Actor, dmg: number, attacker: Actor | null, head: boolean) {
+  damage(target: Actor, dmg: number, attacker: Actor | null, head: boolean, zone: HitZone = head ? "head" : "body") {
     if (!target.alive) return;
     let d = dmg;
     const absorbed = Math.min(target.armor, d);
@@ -472,7 +475,7 @@ export class Engine {
       if (attacker && attacker !== target) target.brain.target = attacker;
     }
     if (attacker?.isPlayer && target !== attacker) {
-      hudStore.set({ hit: { id: ++this.hitId, head } });
+      hudStore.set({ hit: { id: ++this.hitId, head, zone } });
     }
     if (target.hp <= 0) this.kill(target, attacker, head);
   }
@@ -487,7 +490,7 @@ export class Engine {
       target.vehicle = null;
     }
     if (attacker && attacker !== target) attacker.kills++;
-    if (attacker?.isPlayer && target !== attacker) this.burstConfetti(target.pos);
+    if (attacker?.isPlayer && target !== attacker) this.burstBlood(target.pos, head);
     const feed = [{ id: ++this.feedId, killer: attacker?.name ?? "World", victim: target.name, head }, ...hudStore.get().feed].slice(0, 5);
     hudStore.set({ feed });
   }
@@ -510,23 +513,23 @@ export class Engine {
     tr.line.visible = true;
   }
 
-  burstConfetti(at: THREE.Vector3) {
-    const palette = ["#ff3b6b", "#ffd23b", "#3bd1ff", "#7dff3b", "#ff8a3b", "#ffffff", "#c43bff"];
-    for (let i = 0; i < 140; i++) {
-      if (this.confetti.length >= 400) this.confetti.shift();
-      const a = Math.random() * Math.PI * 2;
-      const s = 3 + Math.random() * 6;
-      this.confetti.push({
-        pos: new THREE.Vector3(at.x, at.y + 1.6, at.z),
-        vel: new THREE.Vector3(Math.cos(a) * s * 0.6, 5 + Math.random() * 7, Math.sin(a) * s * 0.6),
-        rot: new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6),
-        spin: new THREE.Vector3(Math.random() * 12, Math.random() * 12, Math.random() * 12),
-        life: 2.2 + Math.random(),
-      });
-      const idx = this.confetti.length - 1;
-      this.confettiMesh.setColorAt(idx, new THREE.Color(palette[i % palette.length]));
+  burstBlood(at: THREE.Vector3, headshot: boolean) {
+    const entry = selectBloodFx(this.bloodFx, headshot);
+    const n = Math.min(90, Math.max(28, Math.round(45 + entry.spraySizeHi * 180)));
+    const positions = new Float32Array(n * 3);
+    const velocities: THREE.Vector3[] = [];
+    for (let i = 0; i < n; i++) {
+      const dir = new THREE.Vector3(Math.random()*2-1, Math.random()*1.4+0.1, Math.random()*2-1).normalize();
+      velocities.push(dir.multiplyScalar(entry.velocity * (0.55 + Math.random()*0.75)));
+      positions[i*3] = at.x; positions[i*3+1] = at.y + 0.95; positions[i*3+2] = at.z;
     }
-    if (this.confettiMesh.instanceColor) this.confettiMesh.instanceColor.needsUpdate = true;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({color:0x8f1820,size:Math.max(0.025,Math.min(0.11,entry.spraySizeHi*entry.scale)),transparent:true,opacity:0.72,depthWrite:false});
+    const points = new THREE.Points(geo, mat);
+    points.frustumCulled = false;
+    (points as any).userData = {velocities,life:Math.max(0.2,Math.min(0.55,entry.lifeMax)),maxLife:Math.max(0.2,Math.min(0.55,entry.lifeMax)),gravity:entry.gravity};
+    this.scene.add(points);
   }
 
   // ---------- simulation ----------
@@ -542,6 +545,7 @@ export class Engine {
       shootPressed: this.shootEdge,
       rollPressed: this.rollEdge,
       radio: k.has("KeyQ"),
+      sprint: k.has("ShiftLeft") || k.has("ShiftRight"),
     };
     this.shootEdge = false;
     this.rollEdge = false;
@@ -604,7 +608,7 @@ export class Engine {
       a.yaw = Math.atan2(a.rollDir.x, a.rollDir.z);
       if (a.rolling <= 0) a.rolling = 0;
     } else if (len > 0) {
-      let sp = a.scoping ? MOVE.AIM_WALK : MOVE.RUN;
+      let sp = a.scoping ? MOVE.AIM_WALK : (inp.sprint && inp.f && !inp.b ? MOVE.RUN * 1.28 : MOVE.RUN);
       if (a.boostT > 0) sp *= MOVE.STUTTER_MULT;
       vx = dx * sp;
       vz = dz * sp;
