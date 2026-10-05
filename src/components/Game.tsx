@@ -243,8 +243,13 @@ export function Game() {
                   <label>Resolution preset
                     <select value={settings.resolution ? `${settings.resolution.w}x${settings.resolution.h}` : "native"} onChange={e => {
                       const v=e.target.value;
-                      if (v==="native") setSetting("resolution", null);
-                      else { const [w,h]=v.split("x").map(Number); setSetting("resolution",{w,h}); }
+                      if (v==="native") {
+                        setSetting("resolution", null);
+                      } else {
+                        const [w,h]=v.split("x").map(Number);
+                        setSetting("resolution",{w,h});
+                        setSetting("aspect", w / h < 1.5 ? "4:3" : "16:9");
+                      }
                     }}>
                       <option value="native">Native display</option>
                       <option value="1920x1080">1920 × 1080</option>
