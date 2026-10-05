@@ -15,6 +15,9 @@ export class Vehicle {
   pitch = 0;
   lean = 0;
   driver: Actor | null = null;
+  entering: Actor | null = null;
+  entryT = 0;
+  door = new THREE.Group();
   group = new THREE.Group();
   body = new THREE.Group();
   wheels: THREE.Mesh[] = [];
@@ -27,6 +30,7 @@ export class Vehicle {
     this.pos.set(x, heightAt(x, z), z);
     this.yaw = yaw;
     this.group.add(this.body);
+    this.door.position.set(kind === "car" ? 0.98 : 0, kind === "car" ? 0.72 : 0, kind === "car" ? 0.15 : 0);
     const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.4 });
     const dark = new THREE.MeshStandardMaterial({ color: "#1b1b1f", roughness: 0.8 });
     const glass = new THREE.MeshStandardMaterial({ color: "#2b3c4a", roughness: 0.1, metalness: 0.6 });
@@ -53,6 +57,9 @@ export class Vehicle {
       add(new THREE.BoxGeometry(0.35, 0.14, 0.05), light, -0.6, 0.7, 2.11);
       add(new THREE.BoxGeometry(0.4, 0.12, 0.05), tail, 0.6, 0.72, -2.11);
       add(new THREE.BoxGeometry(0.4, 0.12, 0.05), tail, -0.6, 0.72, -2.11);
+      this.door.position.set(0.98, 0.65, 0.15);
+      this.door.rotation.set(0, 0, 0);
+      this.body.add(this.door);
       for (const [wx, wz] of [[0.92, 1.35], [-0.92, 1.35], [0.92, -1.35], [-0.92, -1.35]]) {
         this.wheels.push(add(wheelGeo, dark, wx, 0.38, wz, this.group));
       }
@@ -77,6 +84,38 @@ export class Vehicle {
     out.add(this.pos);
     out.y += this.pitch * 0;
     return out;
+  }
+
+  beginEntry(actor: Actor) {
+    if (this.driver || this.entering) return false;
+    this.entering = actor;
+    this.entryT = 0;
+    return true;
+  }
+
+  updateEntry(dt: number) {
+    if (!this.entering) return false;
+    this.entryT += dt;
+    const t = Math.min(1, this.entryT / 0.65);
+    const eased = t * t * (3 - 2 * t);
+    if (this.kind === "car") this.door.rotation.y = -1.15 * Math.sin(Math.min(1, t * 1.8) * Math.PI / 2);
+    const side = this.kind === "car" ? 0.72 : 0;
+    const back = this.kind === "car" ? 0.25 : -0.15;
+    const a = this.entering;
+    a.pos.x = this.pos.x - Math.cos(this.yaw) * side * (1 - eased) + Math.sin(this.yaw) * -back * eased;
+    a.pos.z = this.pos.z + Math.sin(this.yaw) * side * (1 - eased) + Math.cos(this.yaw) * -back * eased;
+    a.pos.y = heightAt(a.pos.x, a.pos.z) + (this.kind === "car" ? 0.05 : 0.02) + Math.sin(t * Math.PI) * 0.12;
+    a.vis.copy(a.pos);
+    a.yaw = this.yaw;
+    if (t >= 1) {
+      a.vehicle = this;
+      this.driver = a;
+      this.entering = null;
+      this.entryT = 0;
+      this.door.rotation.y = 0;
+      return true;
+    }
+    return false;
   }
 
   update(input: { f: number; b: number; l: number; r: number }, dt: number, boxes: Box[], vehicles: Vehicle[]) {
