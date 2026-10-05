@@ -20,9 +20,10 @@ export interface Input {
   rollPressed: boolean;
   radio: boolean;
   sprint: boolean;
+  crouch: boolean;
 }
 
-const emptyInput = (): Input => ({ f: 0, b: 0, l: 0, r: 0, scope: false, shoot: false, shootPressed: false, rollPressed: false, radio: false, sprint: false });
+const emptyInput = (): Input => ({ f: 0, b: 0, l: 0, r: 0, scope: false, shoot: false, shootPressed: false, rollPressed: false, radio: false, sprint: false, crouch: false });
 
 interface Brain {
   target: Actor | null;
@@ -654,6 +655,7 @@ export class Engine {
       rollPressed: this.rollEdge,
       radio: k.has("KeyQ"),
       sprint: k.has("ShiftLeft") || k.has("ShiftRight"),
+      crouch: k.has("KeyC"),
     };
     this.shootEdge = false;
     this.rollEdge = false;
@@ -669,6 +671,7 @@ export class Engine {
     }
     a.radio += ((inp.radio ? 1 : 0) - a.radio) * (1 - Math.exp(-14 * dt));
     a.scoping = inp.scope && !inp.radio;
+    a.crouching = Boolean(inp.crouch) && !a.vehicle && a.rolling <= 0;
 
     if (a.vehicle) return;
 
@@ -737,6 +740,7 @@ export class Engine {
       }
     } else if (len > 0) {
       let sp = a.scoping ? MOVE.AIM_WALK : (inp.sprint && inp.f && !inp.b ? MOVE.SPRINT : MOVE.RUN);
+      if (a.crouching) sp *= 0.58;
       if (a.boostT > 0) sp *= MOVE.STUTTER_MULT;
       vx = dx * sp;
       vz = dz * sp;
@@ -873,8 +877,8 @@ export class Engine {
       const v = a.vehicle;
       br.driveT -= dt;
       const dyaw = angleDiff(v.yaw, wantYaw);
-      inp.f = dist > 12 ? 1 : 0;
-      inp.b = dist < 5 ? 1 : 0;
+      inp.f = settingsStore.get().gameMode === "vehicle-only" ? 1 : (dist > 12 ? 1 : 0);
+      inp.b = settingsStore.get().gameMode === "vehicle-only" ? 0 : (dist < 5 ? 1 : 0);
       inp.l = dyaw > 0.12 ? 1 : 0;
       inp.r = dyaw < -0.12 ? 1 : 0;
       if (!t && dist < 8) this.pickWander(a);
