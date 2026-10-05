@@ -188,9 +188,9 @@ export class Engine {
 
     const sky = new THREE.Color("#9cc4e4");
     this.scene.background = sky;
-    this.scene.fog = new THREE.Fog("#b9d3e6", 60, 220);
-    this.scene.add(new THREE.HemisphereLight("#cfe6ff", "#5a6b3a", 1.1));
-    this.sun = new THREE.DirectionalLight("#fff1d6", 2.4);
+    this.scene.fog = new THREE.Fog("#aebfca", 75, 220);
+    this.scene.add(new THREE.HemisphereLight("#d6e0e5", "#4b5148", 0.82));
+    this.sun = new THREE.DirectionalLight("#f3ead7", 1.55);
     this.sun.castShadow = false;
     const sc = this.sun.shadow.camera;
     sc.left = sc.bottom = -45;
@@ -217,14 +217,14 @@ export class Engine {
 
     // vehicles
     this.vehicles.push(
-      new Vehicle("car", "#c23b22", 14, 10, 0.6, "Sedan"),
-      new Vehicle("car", "#1f5fa8", -22, 26, 2.2, "Coupe"),
-      new Vehicle("bike", "#e0a400", 4, -10, -0.8, "Bati"),
-      new Vehicle("bike", "#2a2a2a", -6, -28, 1.4, "Akuma"),
-      new Vehicle("bike", "#3d745a", 44, 4, Math.PI / 2, "Sanchez"),
-      new Vehicle("bike", "#8a5d32", -44, -4, -Math.PI / 2, "Faggio"),
-      new Vehicle("bike", "#7e3e68", 92, 44, 0, "Bagger"),
-      new Vehicle("bike", "#325c96", -92, -44, Math.PI, "PCJ"),
+      new Vehicle("car", "#7c2f2a", 14, 10, 0.6, "Sedan"),
+      new Vehicle("car", "#2f4f70", -22, 26, 2.2, "Coupe"),
+      new Vehicle("car", "#565b50", 68, -46, -Math.PI / 2, "Hatchback"),
+      new Vehicle("bike", "#b28a25", 4, -10, -0.8, "Bati"),
+      new Vehicle("bike", "#31353a", -6, -28, 1.4, "Akuma"),
+      new Vehicle("bike", "#487050", 44, 4, Math.PI / 2, "Sanchez"),
+      new Vehicle("bike", "#704d31", -44, -4, -Math.PI / 2, "Faggio"),
+      new Vehicle("bike", "#4f5f75", 92, 44, 0, "PCJ"),
     );
     for (const v of this.vehicles) this.scene.add(v.group);
   }
