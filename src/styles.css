@@ -215,3 +215,19 @@
   from{opacity:1}
   to{opacity:0}
 }
+
+
+/* Forced 16:9 presentation with a fixed 1100x1080 render buffer.
+   The canvas keeps its internal render resolution while the browser presents
+   it inside a centered 16:9 frame without non-uniform stretching. */
+.game-canvas{
+  width:100vw;
+  height:auto;
+  aspect-ratio:16 / 9;
+  top:50%;
+  left:50%;
+  right:auto;
+  bottom:auto;
+  transform:translate(-50%,-50%);
+  object-fit:cover;
+}
