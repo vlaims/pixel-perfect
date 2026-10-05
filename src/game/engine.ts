@@ -5,7 +5,6 @@ import { WEAPONS, MOVE, BOT_NAMES, type WeaponId, type HitZone } from "./config"
 import { buildWorld, heightAt, rayBox, rayTerrain, ARENA, type Box } from "./world";
 import { Rig, computeNorm } from "./rig";
 import { Vehicle } from "./vehicles";
-import { PostPass } from "./post";
 import { Sfx } from "./audio";
 import { hudStore, settingsStore } from "./store";
 import { loadBloodFxDat, selectBloodFx, type BloodFxConfig } from "./bloodfx";
@@ -149,7 +148,6 @@ export class Engine {
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(70, 1, 0.1, 400);
-  post: PostPass;
   sfx = new Sfx();
   actors: Actor[] = [];
   vehicles: Vehicle[] = [];
@@ -187,7 +185,6 @@ export class Engine {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
     this.renderer.shadowMap.enabled = false;
     this.renderer.shadowMap.autoUpdate = false;
-    this.post = new PostPass(16, 16);
 
     const sky = new THREE.Color("#9cc4e4");
     this.scene.background = sky;
@@ -286,7 +283,6 @@ export class Engine {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.post.setSize(Math.floor(w * pr), Math.floor(h * pr));
   }
 
   // ---------- input ----------
@@ -1137,8 +1133,8 @@ export class Engine {
   }
 
   render() {
-    if (settingsStore.get().reshade) this.post.render(this.renderer, this.scene, this.camera);
-    else this.renderer.render(this.scene, this.camera);
+    // Direct render only: no post-processing, bloom, sharpening or color composite.
+    this.renderer.render(this.scene, this.camera);
   }
 }
 
