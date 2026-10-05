@@ -19,9 +19,9 @@
 @media(max-width:700px){.game-hint{display:none}.game-topbar{padding:14px}.game-hud{left:14px;right:14px;bottom:14px}.game-score{display:none}}
 
 .game-fps{position:absolute;top:12px;left:12px;padding:5px 9px;background:#000;border:1px solid #2d7cff;color:#fff;font:11px monospace;letter-spacing:.08em;z-index:9998;pointer-events:none}.game-fps strong{margin-left:5px}
-.game-hitmarker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:bold 28px/1 Arial;color:#fff;text-shadow:0 0 2px #000;pointer-events:none;animation:hitFade .1s linear forwards;z-index:9997}.game-hitmarker.head{color:#f22}
+
 .game-crosshair{z-index:9996;display:grid;place-items:center;box-sizing:border-box}.game-crosshair.cross{width:18px!important;height:18px!important;border:0!important}.game-crosshair.cross span{width:2px;height:18px;position:relative}.game-crosshair.cross span:after{content:"";position:absolute;left:-8px;top:8px;width:18px;height:2px;background:currentColor}.game-crosshair.inverted{border-radius:50%;background:#fff}.game-crosshair.inverted span{width:5px;height:5px;background:#000!important;border-radius:50%}.game-settings{position:absolute;z-index:9999;top:50%;left:50%;transform:translate(-50%,-50%);min-width:280px;padding:22px;background:rgba(8,9,12,.96);border:1px solid rgba(255,255,255,.2);box-shadow:0 18px 60px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:14px;font-size:12px}.game-settings-title{font-weight:900;letter-spacing:.18em}.game-settings label{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.game-settings input[type=range]{grid-column:1/-1;width:100%}.game-settings select{background:#16181d;color:#fff;border:1px solid #444;padding:4px}.game-settings input[type=checkbox]{justify-self:end}
-@keyframes hitFade{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(1.12)}}
+to{opacity:0;transform:translate(-50%,-50%) scale(1.12)}}
 
 .game-settings-button{position:absolute;top:12px;right:14px;z-index:10000;width:38px;height:38px;border:1px solid #2d7cff;background:#05070b;color:#fff;font-size:20px;cursor:pointer;box-shadow:0 0 18px rgba(45,124,255,.25)}
 .game-settings-layer{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:rgba(0,0,0,.62);pointer-events:auto}
@@ -29,5 +29,37 @@
 .game-settings header{display:flex;justify-content:space-between;align-items:center}.game-settings header button{background:none;border:0;color:#fff;font-size:24px;cursor:pointer}.game-settings-title{font-weight:900;letter-spacing:.18em}.game-settings header small{font:9px monospace;opacity:.5}
 .game-settings-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.game-settings-tabs button,.settings-wide{background:#11151c;border:1px solid #29303b;color:#aab3c1;padding:9px;cursor:pointer}.game-settings-tabs button.active,.settings-wide{border-color:#2d7cff;color:#fff}
 .settings-panel{display:flex;flex-direction:column;gap:15px}.settings-panel label{display:flex;flex-direction:column;gap:7px;color:#bfc7d4}.settings-panel select,.settings-panel input[type=number]{background:#11151c;color:#fff;border:1px solid #343b48;padding:8px}.settings-panel input[type=range]{width:100%;accent-color:#2d7cff}.settings-panel output{align-self:flex-end;color:#fff;font-family:monospace}.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.settings-grid input[type=color]{height:36px;padding:2px;width:100%;background:#11151c;border:1px solid #343b48}.settings-check{display:grid!important;grid-template-columns:1fr auto;align-items:center}.settings-check input{width:18px;height:18px}
-.game-hitmarker{font:bold 30px/1 Arial;color:#fff;opacity:1!important;animation:hitFade .1s linear forwards;mix-blend-mode:normal}.game-hitmarker.head{color:#f00}.game-crosshair{z-index:9996}.game-crosshair.inverted{border-radius:50%;background:#fff}.game-crosshair.inverted span{background:#000!important}.game-crosshair.cross span{width:2px;height:18px;box-shadow:none}
+.game-crosshair{z-index:9996}.game-crosshair.inverted{border-radius:50%;background:#fff}.game-crosshair.inverted span{background:#000!important}.game-crosshair.cross span{width:2px;height:18px;box-shadow:none}
 @media(max-width:560px){.game-settings{min-width:0;width:calc(100vw - 32px)}.settings-grid{grid-template-columns:1fr}}
+
+/* Compact FiveM-style hit feedback: small, crisp, separated X strokes. */
+.game-hitmarker{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:18px;
+  height:18px;
+  transform:translate(-50%,-50%) scale(.96);
+  pointer-events:none;
+  z-index:9997;
+  color:#fff;
+  opacity:1;
+  animation:hitFade .2s linear forwards;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.9));
+}
+.game-hitmarker span{
+  position:absolute;
+  width:7px;
+  height:2px;
+  border-radius:2px;
+  background:currentColor;
+}
+.game-hitmarker span:nth-child(1){left:1px;top:4px;transform:rotate(45deg)}
+.game-hitmarker span:nth-child(2){right:1px;top:4px;transform:rotate(-45deg)}
+.game-hitmarker span:nth-child(3){left:1px;bottom:4px;transform:rotate(-45deg)}
+.game-hitmarker span:nth-child(4){right:1px;bottom:4px;transform:rotate(45deg)}
+.game-hitmarker.head{color:#f02525}
+@keyframes hitFade{
+  0%{opacity:1;transform:translate(-50%,-50%) scale(.96)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1)}
+}
