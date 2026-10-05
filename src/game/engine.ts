@@ -216,14 +216,18 @@ export class Engine {
     grad.addColorStop(1, "rgba(255,120,20,0)");
     fx.fillStyle = grad;
     fx.fillRect(0, 0, 64, 64);
-    this.flashMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(fc), blending: THREE.AdditiveBlending, depthWrite: false });
+    this.flashMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(fc), depthWrite: false, transparent: true });
 
     // vehicles
     this.vehicles.push(
       new Vehicle("car", "#c23b22", 14, 10, 0.6, "Sedan"),
       new Vehicle("car", "#1f5fa8", -22, 26, 2.2, "Coupe"),
-      new Vehicle("bike", "#e0a400", 18, -14, -0.8, "Bati"),
+      new Vehicle("bike", "#e0a400", 4, -10, -0.8, "Bati"),
       new Vehicle("bike", "#2a2a2a", -6, -28, 1.4, "Akuma"),
+      new Vehicle("bike", "#3d745a", 44, 4, Math.PI / 2, "Sanchez"),
+      new Vehicle("bike", "#8a5d32", -44, -4, -Math.PI / 2, "Faggio"),
+      new Vehicle("bike", "#7e3e68", 92, 44, 0, "Bagger"),
+      new Vehicle("bike", "#325c96", -92, -44, Math.PI, "PCJ"),
     );
     for (const v of this.vehicles) this.scene.add(v.group);
   }
