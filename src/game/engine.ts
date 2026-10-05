@@ -625,6 +625,8 @@ export class Engine {
         a.rolling = 0;
         a.rollAngle = Math.PI * 2;
         a.yaw = a.rollYaw;
+        a.pivot.rotation.set(0, 0, 0);
+        a.pivot.position.y = 0.95;
       }
     } else if (len > 0) {
       let sp = a.scoping ? MOVE.AIM_WALK : (inp.sprint && inp.f && !inp.b ? MOVE.RUN * 1.28 : MOVE.RUN);
@@ -1009,10 +1011,11 @@ export class Engine {
         a.pivot.position.y = 0.95 - 0.75 * k;
       } else if (a.rolling > 0) {
         const t = 1 - a.rolling / MOVE.ROLL_TIME;
+        const rollEase = t * t * (3 - 2 * t);
         a.root.rotation.y = a.rollYaw;
-        a.pivot.rotation.set(a.rollAngle, 0, 0);
-        // Lift/crouch through the tumble so the feet do not remain planted.
-        a.pivot.position.y = 0.72 + Math.sin(t * Math.PI) * 0.16;
+        a.pivot.rotation.set(rollEase * Math.PI * 2, 0, 0);
+        // Lower the center of mass during the tuck.
+        a.pivot.position.y = 0.58 + Math.sin(rollEase * Math.PI) * 0.12;
       } else {
         a.pivot.rotation.set(0, 0, 0);
         a.pivot.position.y = 0.95;
