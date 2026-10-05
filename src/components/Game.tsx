@@ -292,7 +292,6 @@ export function Game() {
                   <div className="settings-section-title">INPUT & AUDIO</div>
                   <label>Mouse sensitivity <output>{settings.sensitivity.toFixed(1)}×</output><input type="range" min="0.1" max="5" step="0.1" value={settings.sensitivity} onChange={e=>setSetting("sensitivity",Number(e.target.value))}/></label>
                   <label>Master volume <output>{Math.round(settings.volume*100)}%</output><input type="range" min="0" max="1" step="0.05" value={settings.volume} onChange={e=>setSetting("volume",Number(e.target.value))}/></label>
-                  <label className="settings-check"><span>Post FX</span><input type="checkbox" checked={settings.reshade} onChange={e=>setSetting("reshade",e.target.checked)}/></label>
                   <div className="settings-help">ESC closes this panel. Click outside the panel to close it. Changes are saved locally.</div>
                 </div>}
               </div>
