@@ -13,7 +13,7 @@ export class PostPass {
   mat: THREE.ShaderMaterial;
 
   constructor(w: number, h: number) {
-    this.target = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: 4 });
+    this.target = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: 0 });
     this.mat = new THREE.ShaderMaterial({
       uniforms: { tDiffuse: { value: this.target.texture }, texel: { value: new THREE.Vector2(1 / w, 1 / h) } },
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
