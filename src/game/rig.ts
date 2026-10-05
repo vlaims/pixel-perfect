@@ -41,7 +41,7 @@ export class Rig {
       const m = o as THREE.Mesh;
       if (m.isMesh) {
         m.castShadow = true;
-        m.frustumCulled = false;
+        m.frustumCulled = true;
         if (tint && m.material) {
           const mat = (m.material as THREE.MeshStandardMaterial).clone();
           if (mat.color) mat.color.multiply(tint);
