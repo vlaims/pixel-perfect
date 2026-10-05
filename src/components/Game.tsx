@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Engine } from "../game/engine";
-import { hudStore, useHud } from "../game/store";
+import { hudStore, settingsStore, useHud, useSettings } from "../game/store";
 
 const MODEL_URL =
   "/__l5e/assets-v1/939a0cb9-7bfb-4b86-b6f5-72843aed44ab/male.glb";
@@ -15,6 +15,7 @@ export function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Engine | null>(null);
   const hud = useHud();
+  const settings = useSettings();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,6 +38,11 @@ export function Game() {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Escape") {
+        e.preventDefault();
+        hudStore.set({ settingsOpen: !hudStore.get().settingsOpen });
+        return;
+      }
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
         e.preventDefault();
       }
@@ -120,9 +126,26 @@ export function Game() {
         <span className="game-hint">CLICK TO PLAY · WASD MOVE · LMB FIRE · RMB AIM · R RELOAD · E VEHICLE</span>
       </div>
 
-      <div className="game-crosshair" aria-hidden="true">
-        <span />
+      <div className="game-crosshair" style={{ width: settings.crossSize, height: settings.crossSize, color: settings.color, border: `${settings.outline}px solid #000` }} aria-hidden="true">
+        <span style={{ background: settings.color }} />
       </div>
+
+      {hud.hit && <div key={hud.hit.id} className={`game-hitmarker ${hud.hit.zone === "head" ? "head" : ""}`}>X</div>}
+
+      <div className="game-fps">FPS <strong id="fps-value">--</strong></div>
+
+      {hud.settingsOpen && <div className="game-settings">
+        <div className="game-settings-title">SETTINGS</div>
+        <label>Crosshair <select value={settings.crosshair} onChange={e => settingsStore.set({ crosshair: e.target.value as any })}>
+          <option value="dot">Dot</option><option value="cross">Cross</option><option value="inverted">Inverted Dot</option>
+        </select></label>
+        <label>Outline Size <input type="range" min="0" max="5" step="1" value={settings.outline} onChange={e => settingsStore.set({ outline: Number(e.target.value) })}/><span>{settings.outline}px</span></label>
+        <label>Resolution <select value={settings.resolution ? `${settings.resolution.w}x${settings.resolution.h}` : "native"} onChange={e => { const v=e.target.value; settingsStore.set({ resolution: v==="native" ? null : {w:Number(v.split("x")[0]),h:Number(v.split("x")[1])} }); }}>
+          <option value="native">Native</option><option value="1920x1080">1920×1080</option><option value="1280x960">1280×960</option>
+        </select></label>
+        <label>Post FX <input type="checkbox" checked={settings.reshade} onChange={e => settingsStore.set({ reshade: e.target.checked })}/></label>
+        <label>Volume <input type="range" min="0" max="1" step="0.05" value={settings.volume} onChange={e => settingsStore.set({ volume: Number(e.target.value) })}/></label>
+      </div>}
 
       <div className="game-hud">
         <div className="game-status">
