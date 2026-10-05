@@ -186,11 +186,11 @@ export class Engine {
     this.renderer.shadowMap.enabled = false;
     this.renderer.shadowMap.autoUpdate = false;
 
-    const sky = new THREE.Color("#9cc4e4");
+    const sky = new THREE.Color("#081020");
     this.scene.background = sky;
-    this.scene.fog = new THREE.Fog("#aebfca", 75, 220);
-    this.scene.add(new THREE.HemisphereLight("#d6e0e5", "#4b5148", 0.82));
-    this.sun = new THREE.DirectionalLight("#f3ead7", 1.55);
+    this.scene.fog = new THREE.Fog("#101827", 72, 210);
+    this.scene.add(new THREE.HemisphereLight("#66728a", "#151a22", 0.48));
+    this.sun = new THREE.DirectionalLight("#a9b8dc", 0.88);
     this.sun.castShadow = false;
     const sc = this.sun.shadow.camera;
     sc.left = sc.bottom = -45;
@@ -199,6 +199,33 @@ export class Engine {
     sc.far = 160;
     this.sun.shadow.bias = -0.0005;
     this.scene.add(this.sun, this.sun.target);
+
+    // Lightweight moon and stars. No bloom, glow, or post-processing.
+    const moon = new THREE.Mesh(
+      new THREE.SphereGeometry(6.5, 12, 8),
+      new THREE.MeshBasicMaterial({ color: "#d6dcef" })
+    );
+    moon.position.set(-88, 104, -118);
+    this.scene.add(moon);
+
+    const starCount = 160;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const radius = 80 + Math.random() * 90;
+      starPositions[i * 3] = Math.cos(a) * radius;
+      starPositions[i * 3 + 1] = 58 + Math.random() * 80;
+      starPositions[i * 3 + 2] = Math.sin(a) * radius;
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(
+      starGeo,
+      new THREE.PointsMaterial({ color: "#c8d0e0", size: 0.65, sizeAttenuation: false, depthWrite: false })
+    );
+    stars.frustumCulled = false;
+    this.scene.add(stars);
+
 
     const w = buildWorld(this.scene);
     this.boxes = w.boxes;
@@ -215,16 +242,26 @@ export class Engine {
     fx.fillRect(0, 0, 64, 64);
     this.flashMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(fc), depthWrite: false, transparent: true });
 
-    // vehicles
+    // Compact drivable fleet: all visible vehicles are usable.
     this.vehicles.push(
+      // 10 cars
       new Vehicle("car", "#7c2f2a", 14, 10, 0.6, "Sedan"),
       new Vehicle("car", "#2f4f70", -22, 26, 2.2, "Coupe"),
       new Vehicle("car", "#565b50", 68, -46, -Math.PI / 2, "Hatchback"),
+      new Vehicle("car", "#6b5141", -70, 46, Math.PI / 2, "Pickup"),
+      new Vehicle("car", "#555555", 46, 70, 0, "Wagon"),
+      new Vehicle("car", "#7a3d54", -46, -70, Math.PI, "Compact"),
+      new Vehicle("car", "#52635a", 94, -2, Math.PI / 2, "Van"),
+      new Vehicle("car", "#3d556d", -94, 2, -Math.PI / 2, "Taxi"),
+      new Vehicle("car", "#8a6b39", 2, 94, Math.PI, "Hatch"),
+      new Vehicle("car", "#4b4b4b", -2, -94, 0, "Sport"),
+      // 6 motorcycles
       new Vehicle("bike", "#b28a25", 4, -10, -0.8, "Bati"),
       new Vehicle("bike", "#31353a", -6, -28, 1.4, "Akuma"),
       new Vehicle("bike", "#487050", 44, 4, Math.PI / 2, "Sanchez"),
       new Vehicle("bike", "#704d31", -44, -4, -Math.PI / 2, "Faggio"),
       new Vehicle("bike", "#4f5f75", 92, 44, 0, "PCJ"),
+      new Vehicle("bike", "#6e3f59", -92, -44, Math.PI, "Bagger"),
     );
     for (const v of this.vehicles) this.scene.add(v.group);
   }
