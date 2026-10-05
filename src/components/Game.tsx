@@ -43,6 +43,7 @@ export function Game() {
       const current = settingsStore.get();
       settingsStore.set({
         crosshair: ["dot","cross","inverted"].includes(parsed.crosshair) ? parsed.crosshair : current.crosshair,
+        gameMode: parsed.gameMode === "ffa" ? "ffa" : "vehicle-only",
         crossSize: Number.isFinite(parsed.crossSize) ? Math.max(2, Math.min(32, parsed.crossSize)) : current.crossSize,
         outline: Number.isFinite(parsed.outline) ? Math.max(0, Math.min(5, parsed.outline)) : current.outline,
         sensitivity: Number.isFinite(parsed.sensitivity) ? Math.max(0.1, Math.min(5, parsed.sensitivity)) : current.sensitivity,
@@ -164,7 +165,8 @@ export function Game() {
   const setSetting = <K extends keyof typeof settings>(key: K, value: (typeof settings)[K]) => settingsStore.set({ [key]: value } as any);
   const resetSettings = () => settingsStore.set({
     crosshair: "dot",
-    crossSize: 6,
+    gameMode: "vehicle-only",
+    crossSize: 10,
     outline: 1,
     color: "#ffffff",
     sensitivity: 1,
@@ -195,7 +197,7 @@ export function Game() {
 
       <div
         className={`game-crosshair ${settings.crosshair}`}
-        style={{ width: settings.crosshair === "cross" ? 18 : settings.crossSize, height: settings.crosshair === "cross" ? 18 : settings.crossSize, color: settings.centerColor, border: settings.crosshair === "cross" ? "0" : `${settings.outline}px solid ${settings.borderColor}` }}
+        style={{ width: settings.crosshair === "cross" ? 18 : settings.crossSize, height: settings.crosshair === "cross" ? 18 : settings.crossSize, color: settings.centerColor, border: settings.crosshair === "cross" || settings.crosshair === "inverted" ? "0" : `${settings.outline}px solid ${settings.borderColor}`, ["--crosshair-dot-size" as any]: `${settings.crossSize}px`, ["--crosshair-outline" as any]: `${settings.outline}px`, ["--crosshair-outline-color" as any]: settings.borderColor }}
         aria-hidden="true"
       >
         <span style={{ background: settings.centerColor }} />
@@ -239,6 +241,11 @@ export function Game() {
 
               <div className="settings-content">
                 {tab === "resolution" && <div className="settings-panel">
+                  <div className="settings-section-title">GAME MODE</div>
+                  <label>Mode<select value={settings.gameMode} onChange={e=>setSetting("gameMode",e.target.value as "vehicle-only"|"ffa")}>
+                    <option value="vehicle-only">VEHICLE ONLY — NPCs stay in cars</option>
+                    <option value="ffa">FFA — NPCs can drive or fight on foot</option>
+                  </select></label>
                   <div className="settings-section-title">DISPLAY</div>
                   <label>Resolution preset
                     <select value={settings.resolution ? `${settings.resolution.w}x${settings.resolution.h}` : "native"} onChange={e => {
