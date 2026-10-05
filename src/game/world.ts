@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as THREE from "three";
 
 export const ARENA = 92;

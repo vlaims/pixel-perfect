@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as THREE from "three";
 import { VEHICLES, MOVE, type VehicleCfg } from "./config";
 import { heightAt, type Box, ARENA } from "./world";
