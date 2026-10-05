@@ -127,10 +127,10 @@ export class Rig {
       this.rot("RightLeg", 1.4, 0, 0);
     } else {
       if (sprint) {
-        this.rot("LeftUpLeg", -Math.max(0, s) * 1.0, 0, 0);
-        this.rot("RightUpLeg", Math.max(0, -s) * 1.0, 0, 0);
-        this.rot("LeftLeg", Math.max(0, -c) * 1.25 + 0.08, 0, 0);
-        this.rot("RightLeg", Math.max(0, c) * 1.25 + 0.08, 0, 0);
+        this.rot("LeftUpLeg", -Math.max(0, s) * 1.2, 0, 0);
+        this.rot("RightUpLeg", Math.max(0, -s) * 1.2, 0, 0);
+        this.rot("LeftLeg", Math.max(0, -c) * 1.4 + 0.08, 0, 0);
+        this.rot("RightLeg", Math.max(0, c) * 1.4 + 0.08, 0, 0);
       } else {
         this.rot("LeftUpLeg", -s * 0.65 * mv, 0, 0);
         this.rot("RightUpLeg", s * 0.65 * mv, 0, 0);
@@ -138,14 +138,14 @@ export class Rig {
         this.rot("RightLeg", Math.max(0, c) * 1.0 * mv + 0.05, 0, 0);
       }
     }
-    this.rot("Spine", sprint ? 0.22 : 0.04 * mv, s * 0.06 * mv * (1 - p.aim), 0);
+    this.rot("Spine", sprint ? 0.30 : 0.04 * mv, s * 0.06 * mv * (1 - p.aim), 0);
     this.rot("Spine1", -p.pitch * 0.5 * p.aim, 0, 0);
     this.rot("Spine2", -p.pitch * 0.5 * p.aim, 0, 0);
     this.rot("Head", -p.pitch * 0.3, 0, 0);
 
     const a = p.aim;
     // Right arm: down at side (low ready) -> forward aim
-    const rDown = (sprint ? 0.75 : 1.15) * (1 - a);
+    const rDown = (sprint ? 0.9 : 1.15) * (1 - a);
     const rFwd = (p.pistol ? 1.5 : 1.35) * a + 0.35 * (1 - a);
     this.rot("RightArm", c * 0.25 * mv * (1 - a), rFwd, rDown + 0.08 * a, "YXZ");
     this.rot("RightForeArm", 0, 0.25 * a + 0.5 * (1 - a), 0);
@@ -155,7 +155,7 @@ export class Rig {
       this.rot("LeftArm", 0, -0.45 * r - 1.2 * a * (1 - r), (-1.2 * (1 - a) * (1 - r)) - 0.2 * r, "YXZ");
       this.rot("LeftForeArm", 0, -0.2 * r, 2.55 * r);
     } else {
-      const lDown = (sprint ? -0.75 : -1.2) * (1 - a);
+      const lDown = (sprint ? -0.9 : -1.2) * (1 - a);
       const lFwd = -(p.pistol ? 1.45 : 1.25) * a - 0.25 * (1 - a);
       this.rot("LeftArm", -c * 0.25 * mv * (1 - a), lFwd, lDown, "YXZ");
       this.rot("LeftForeArm", 0, -(p.pistol ? 0.35 : 0.75) * a - 0.4 * (1 - a), 0);
