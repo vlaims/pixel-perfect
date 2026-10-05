@@ -308,6 +308,7 @@ export class Engine {
       bot.yaw = vehicle.yaw;
       bot.aimYaw = vehicle.yaw;
       bot.brain!.goVehicle = vehicle;
+      bot.brain!.driveT = 18 + Math.random() * 18;
       vehicle.beginEntry(bot);
       bot.entering = 0.65;
     }
