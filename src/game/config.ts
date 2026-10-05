@@ -37,6 +37,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
 
 export const MOVE = {
   RUN: 6.2,
+  SPRINT: 8.5,
   AIM_WALK: 3.6,
   STUTTER_MULT: 1.15,
   STUTTER_WINDOW: 0.3,
