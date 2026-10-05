@@ -2,15 +2,11 @@
 import * as THREE from "three";
 
 /**
- * Procedural urban arena.
- *
- * The map is intentionally flat and road-heavy so the browser spends its
- * frame time on gameplay instead of terrain sampling.  It uses simple
- * primitives/instancing for a dense FiveM-inspired city look without loading
- * a huge external map pack.
+ * Dense Brazilian-RP-inspired city arena.
+ * Original procedural layout: broad avenues, narrow side streets, mixed-height
+ * blocks, storefronts, utility poles, palms, parked cars and motorcycles.
  */
 export const ARENA = 120;
-
 export const PLATEAUS: never[] = [];
 
 export function heightAt(_x: number, _z: number) {
@@ -34,6 +30,28 @@ function rng(seed: number) {
   };
 }
 
+function addMesh(
+  scene: THREE.Scene,
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  x: number,
+  y: number,
+  z: number,
+  sx = 1,
+  sy = 1,
+  sz = 1,
+  yaw = 0,
+) {
+  const m = new THREE.Mesh(geometry, material);
+  m.position.set(x, y, z);
+  m.rotation.y = yaw;
+  m.scale.set(sx, sy, sz);
+  m.castShadow = false;
+  m.receiveShadow = false;
+  scene.add(m);
+  return m;
+}
+
 function addBox(
   scene: THREE.Scene,
   geometry: THREE.BoxGeometry,
@@ -44,38 +62,29 @@ function addBox(
   sx: number,
   sy: number,
   sz: number,
+  yaw = 0,
   boxes?: Box[],
   collision = false,
 ) {
-  const m = new THREE.Mesh(geometry, material);
-  m.position.set(x, y, z);
-  m.scale.set(sx, sy, sz);
-  m.matrixAutoUpdate = true;
-  m.castShadow = false;
-  m.receiveShadow = false;
-  scene.add(m);
-
+  addMesh(scene, geometry, material, x, y, z, sx, sy, sz, yaw);
   if (collision && boxes) {
+    const ca = Math.abs(Math.cos(yaw));
+    const sa = Math.abs(Math.sin(yaw));
+    const hx = (sx * ca + sz * sa) * 0.5;
+    const hz = (sx * sa + sz * ca) * 0.5;
     boxes.push({
-      minX: x - sx / 2,
-      maxX: x + sx / 2,
-      minZ: z - sz / 2,
-      maxZ: z + sz / 2,
+      minX: x - hx,
+      maxX: x + hx,
+      minZ: z - hz,
+      maxZ: z + hz,
       y0: -0.2,
-      y1: y + sy / 2,
+      y1: y + sy * 0.5,
     });
   }
-  return m;
 }
 
-function makeInstanced(
-  geometry: THREE.BufferGeometry,
-  material: THREE.Material,
-  count: number,
-) {
-  const mesh = new THREE.InstancedMesh(geometry, material, count);
-  mesh.frustumCulled = true;
-  return mesh;
+function makeInstanced(geometry: THREE.BufferGeometry, material: THREE.Material, count: number) {
+  return new THREE.InstancedMesh(geometry, material, count);
 }
 
 function localToWorld(x: number, z: number, yaw: number, lx: number, lz: number) {
@@ -89,456 +98,419 @@ export function buildWorld(scene: THREE.Scene) {
   const rand = rng(1337);
   const boxes: Box[] = [];
 
-  // ---------- Materials ----------
-  const asphalt = new THREE.MeshLambertMaterial({ color: "#282b30" });
-  const road = new THREE.MeshLambertMaterial({ color: "#202328" });
-  const sidewalk = new THREE.MeshLambertMaterial({ color: "#757a80" });
-  const curb = new THREE.MeshLambertMaterial({ color: "#b5b7ba" });
-  const lane = new THREE.MeshBasicMaterial({ color: "#e7e4d8" });
-  const lineYellow = new THREE.MeshBasicMaterial({ color: "#c8a742" });
-  const glass = new THREE.MeshLambertMaterial({ color: "#375263", roughness: 0.25, metalness: 0.25 });
-  const concrete = new THREE.MeshLambertMaterial({ color: "#565b61" });
-  const roof = new THREE.MeshLambertMaterial({ color: "#34383e" });
-  const treeGreen = new THREE.MeshLambertMaterial({ color: "#2f5f3b" });
-  const trunkMat = new THREE.MeshLambertMaterial({ color: "#6a4b2d" });
-  const lampMat = new THREE.MeshBasicMaterial({ color: "#f6d88a" });
+  // ----- Palette -----
+  const base = new THREE.MeshLambertMaterial({ color: "#686a68" });
+  const asphalt = new THREE.MeshLambertMaterial({ color: "#26282c" });
+  const asphaltPatch = new THREE.MeshLambertMaterial({ color: "#303237" });
+  const sidewalk = new THREE.MeshLambertMaterial({ color: "#888982" });
+  const curb = new THREE.MeshLambertMaterial({ color: "#b9b8ae" });
+  const white = new THREE.MeshBasicMaterial({ color: "#ece9dc" });
+  const yellow = new THREE.MeshBasicMaterial({ color: "#d2b04b" });
+  const concrete = new THREE.MeshLambertMaterial({ color: "#6a6d70" });
+  const darkConcrete = new THREE.MeshLambertMaterial({ color: "#3b3e42" });
+  const glass = new THREE.MeshLambertMaterial({ color: "#385563", roughness: 0.2, metalness: 0.2 });
+  const glassLight = new THREE.MeshBasicMaterial({ color: "#9bbac7" });
+  const roof = new THREE.MeshLambertMaterial({ color: "#3a3b3c" });
+  const brick = new THREE.MeshLambertMaterial({ color: "#8b6150" });
+  const plaster = new THREE.MeshLambertMaterial({ color: "#7a7a72" });
+  const stucco = new THREE.MeshLambertMaterial({ color: "#6c6259" });
+  const treeGreen = new THREE.MeshLambertMaterial({ color: "#2f623c" });
+  const treeDark = new THREE.MeshLambertMaterial({ color: "#22472c" });
+  const trunk = new THREE.MeshLambertMaterial({ color: "#60462f" });
+  const lamp = new THREE.MeshBasicMaterial({ color: "#ffe2a1" });
+  const red = new THREE.MeshBasicMaterial({ color: "#b52d2d" });
 
-  // ---------- Base city slab ----------
-  const slab = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), asphalt);
-  slab.rotation.x = -Math.PI / 2;
-  slab.frustumCulled = false;
-  scene.add(slab);
+  // ----- City base -----
+  addMesh(scene, new THREE.PlaneGeometry(250, 250), base, 0, 0, 0);
+  const roadCenters = [-96, -48, 0, 48, 96];
+  const roadWidth = 14;
 
-  const roadCenters = [-90, -45, 0, 45, 90];
-  const roadWidth = 13.5;
-
-  // Large road corridors.
-  const roadXGeo = new THREE.PlaneGeometry(roadWidth, 240);
-  const roadZGeo = new THREE.PlaneGeometry(240, roadWidth);
+  const roadXGeo = new THREE.PlaneGeometry(roadWidth, 250);
+  const roadZGeo = new THREE.PlaneGeometry(250, roadWidth);
   for (const x of roadCenters) {
-    const m = new THREE.Mesh(roadXGeo, road);
-    m.rotation.x = -Math.PI / 2;
-    m.position.set(x, 0.006, 0);
-    scene.add(m);
+    const m = addMesh(scene, roadXGeo, asphalt, x, 0.01, 0);
+    m.frustumCulled = false;
   }
   for (const z of roadCenters) {
-    const m = new THREE.Mesh(roadZGeo, road);
-    m.rotation.x = -Math.PI / 2;
-    m.position.set(0, 0.007, z);
-    scene.add(m);
+    const m = addMesh(scene, roadZGeo, asphalt, 0, 0.012, z);
+    m.frustumCulled = false;
   }
 
-  // Sidewalk + curb strips around every avenue.
-  const stripGeo = new THREE.BoxGeometry(2.0, 0.16, 240);
-  const stripGeoZ = new THREE.BoxGeometry(240, 0.16, 2.0);
-  const curbGeo = new THREE.BoxGeometry(0.18, 0.24, 240);
-  const curbGeoZ = new THREE.BoxGeometry(240, 0.24, 0.18);
+  // Secondary narrower streets between the avenues.
+  const sideCenters = [-72, -24, 24, 72];
+  const sideRoadX = new THREE.PlaneGeometry(7.5, 250);
+  const sideRoadZ = new THREE.PlaneGeometry(250, 7.5);
+  for (const x of sideCenters) addMesh(scene, sideRoadX, asphaltPatch, x, 0.014, 0);
+  for (const z of sideCenters) addMesh(scene, sideRoadZ, asphaltPatch, 0, 0.016, z);
+
+  // Sidewalk bands.
+  const walkX = new THREE.BoxGeometry(2.0, 0.14, 250);
+  const walkZ = new THREE.BoxGeometry(250, 0.14, 2.0);
+  const curbX = new THREE.BoxGeometry(0.18, 0.22, 250);
+  const curbZ = new THREE.BoxGeometry(250, 0.22, 0.18);
   for (const x of roadCenters) {
-    for (const off of [-8.2, 8.2]) {
-      addBox(scene, stripGeo, sidewalk, x + off, 0.08, 0, 1, 1, 1);
-      addBox(scene, curbGeo, curb, x + off + (off > 0 ? -0.96 : 0.96), 0.12, 0, 1, 1, 1);
+    for (const s of [-8.0, 8.0]) {
+      addBox(scene, walkX, sidewalk, x + s, 0.07, 0, 1, 1, 1);
+      addBox(scene, curbX, curb, x + s + (s > 0 ? -0.95 : 0.95), 0.11, 0, 1, 1, 1);
     }
   }
   for (const z of roadCenters) {
-    for (const off of [-8.2, 8.2]) {
-      addBox(scene, stripGeoZ, sidewalk, 0, 0.08, z + off, 1, 1, 1);
-      addBox(scene, curbGeoZ, curb, 0, 0.12, z + off + (off > 0 ? -0.96 : 0.96), 1, 1, 1);
+    for (const s of [-8.0, 8.0]) {
+      addBox(scene, walkZ, sidewalk, 0, 0.07, z + s, 1, 1, 1);
+      addBox(scene, curbZ, curb, 0, 0.11, z + s + (s > 0 ? -0.95 : 0.95), 1, 1, 1);
     }
   }
 
-  // Lane dividers and crosswalks. Instanced to keep the draw-call count low.
-  const laneGeo = new THREE.BoxGeometry(0.12, 0.022, 5.5);
-  const laneMarksX = makeInstanced(laneGeo, lane, 128);
-  const laneMarksZ = makeInstanced(laneGeo, lane, 128);
+  // Lane marks.
+  const dashGeo = new THREE.BoxGeometry(0.12, 0.025, 4.7);
+  const dashesX = makeInstanced(dashGeo, white, 130);
+  const dashesZ = makeInstanced(dashGeo, white, 130);
   const mi = new THREE.Matrix4();
   const mq = new THREE.Quaternion();
   const ms = new THREE.Vector3(1, 1, 1);
-  let li = 0;
-  let lz = 0;
+  let dix = 0;
+  let diz = 0;
+  mq.identity();
   for (const x of roadCenters) {
-    for (let z = -108; z <= 108; z += 12) {
-      if (Math.abs(Math.round(z / 45) * 45 - z) < 4) continue;
-      if (li >= laneMarksX.count) break;
-      mi.compose(new THREE.Vector3(x, 0.02, z), mq, ms);
-      laneMarksX.setMatrixAt(li++, mi);
+    for (let z = -115; z <= 115; z += 11) {
+      if (dix >= dashesX.count) break;
+      if (Math.abs(((z + 1) % 48 + 48) % 48) < 5) continue;
+      mi.compose(new THREE.Vector3(x, 0.025, z), mq, ms);
+      dashesX.setMatrixAt(dix++, mi);
     }
   }
+  mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
   for (const z of roadCenters) {
-    for (let x = -108; x <= 108; x += 12) {
-      if (Math.abs(Math.round(x / 45) * 45 - x) < 4) continue;
-      if (lz >= laneMarksZ.count) break;
-      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-      mi.compose(new THREE.Vector3(x, 0.021, z), mq, ms);
-      laneMarksZ.setMatrixAt(lz++, mi);
+    for (let x = -115; x <= 115; x += 11) {
+      if (diz >= dashesZ.count) break;
+      if (Math.abs(((x + 1) % 48 + 48) % 48) < 5) continue;
+      mi.compose(new THREE.Vector3(x, 0.026, z), mq, ms);
+      dashesZ.setMatrixAt(diz++, mi);
     }
   }
-  laneMarksX.count = li;
-  laneMarksZ.count = lz;
-  laneMarksX.instanceMatrix.needsUpdate = true;
-  laneMarksZ.instanceMatrix.needsUpdate = true;
-  scene.add(laneMarksX, laneMarksZ);
+  dashesX.count = dix;
+  dashesZ.count = diz;
+  dashesX.instanceMatrix.needsUpdate = true;
+  dashesZ.instanceMatrix.needsUpdate = true;
+  scene.add(dashesX, dashesZ);
 
+  // Yellow median stripes on the main roads.
+  const medianGeo = new THREE.BoxGeometry(0.08, 0.027, 250);
+  const medX = makeInstanced(medianGeo, yellow, 5);
+  const medZ = makeInstanced(medianGeo, yellow, 5);
+  let mix = 0;
+  let miz = 0;
   mq.identity();
-
-  // Double yellow center lines on selected boulevards.
-  const yellowGeo = new THREE.BoxGeometry(0.08, 0.023, 240);
-  const yellow = makeInstanced(yellowGeo, lineYellow, roadCenters.length);
-  let yi = 0;
   for (const x of roadCenters) {
-    if (x === 0 || x === 90) continue;
-    mi.compose(new THREE.Vector3(x - 0.18, 0.0225, 0), mq, ms);
-    yellow.setMatrixAt(yi++, mi);
+    if (Math.abs(x) === 96) continue;
+    mi.compose(new THREE.Vector3(x - 0.18, 0.028, 0), mq, ms);
+    medX.setMatrixAt(mix++, mi);
   }
-  yellow.count = yi;
-  yellow.instanceMatrix.needsUpdate = true;
-  scene.add(yellow);
-
-  const yellowZ = makeInstanced(yellowGeo, lineYellow, roadCenters.length);
-  let yzi = 0;
+  mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
   for (const z of roadCenters) {
-    if (z === 0 || z === -90) continue;
-    mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-    mi.compose(new THREE.Vector3(0, 0.023, z - 0.18), mq, ms);
-    yellowZ.setMatrixAt(yzi++, mi);
+    if (Math.abs(z) === 96) continue;
+    mi.compose(new THREE.Vector3(0, 0.029, z - 0.18), mq, ms);
+    medZ.setMatrixAt(miz++, mi);
   }
-  yellowZ.count = yzi;
-  yellowZ.instanceMatrix.needsUpdate = true;
-  scene.add(yellowZ);
+  medX.count = mix;
+  medZ.count = miz;
+  medX.instanceMatrix.needsUpdate = true;
+  medZ.instanceMatrix.needsUpdate = true;
+  scene.add(medX, medZ);
 
-  mq.identity();
-
-  // Crosswalk bars at all large intersections.
-  const crossGeo = new THREE.BoxGeometry(0.75, 0.026, 3.4);
-  const crossX = makeInstanced(crossGeo, lane, 280);
-  const crossZ = makeInstanced(crossGeo, lane, 280);
-  let cxi = 0;
-  let czi = 0;
+  // Intersections / crosswalks.
+  const crossGeo = new THREE.BoxGeometry(0.75, 0.026, 3.6);
+  const crossA = makeInstanced(crossGeo, white, 280);
+  const crossB = makeInstanced(crossGeo, white, 280);
+  let ca = 0, cb = 0;
   for (const x of roadCenters) {
     for (const z of roadCenters) {
       for (let i = -3; i <= 3; i++) {
-        if (cxi < crossX.count) {
-          mi.compose(
-            new THREE.Vector3(x - 4.5, 0.024, z + i * 1.05),
-            mq,
-            ms,
-          );
-          crossX.setMatrixAt(cxi++, mi);
+        if (ca < crossA.count) {
+          mi.compose(new THREE.Vector3(x - 4.7, 0.03, z + i * 1.0), mq, ms);
+          crossA.setMatrixAt(ca++, mi);
         }
-        if (czi < crossZ.count) {
+        if (cb < crossB.count) {
           mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-          mi.compose(
-            new THREE.Vector3(x + i * 1.05, 0.024, z - 4.5),
-            mq,
-            ms,
-          );
-          crossZ.setMatrixAt(czi++, mi);
+          mi.compose(new THREE.Vector3(x + i * 1.0, 0.031, z - 4.7), mq, ms);
+          crossB.setMatrixAt(cb++, mi);
         }
       }
     }
   }
-  crossX.count = cxi;
-  crossZ.count = czi;
-  crossX.instanceMatrix.needsUpdate = true;
-  crossZ.instanceMatrix.needsUpdate = true;
-  scene.add(crossX, crossZ);
+  crossA.count = ca;
+  crossB.count = cb;
+  crossA.instanceMatrix.needsUpdate = true;
+  crossB.instanceMatrix.needsUpdate = true;
+  scene.add(crossA, crossB);
 
-  // ---------- Buildings ----------
-  const buildingColors = [
-    "#474c54",
-    "#53585f",
-    "#5f5b55",
-    "#4a5257",
-    "#6d625d",
-    "#3f454b",
-    "#696c70",
-    "#514e57",
-  ];
+  // Small asphalt repair patches add city texture without a texture download.
+  const patchGeo = new THREE.PlaneGeometry(8, 3);
+  for (let i = 0; i < 34; i++) {
+    const x = (rand() - 0.5) * 220;
+    const z = (rand() - 0.5) * 220;
+    const yaw = rand() * Math.PI;
+    const m = addMesh(scene, patchGeo, asphaltPatch, x, 0.021, z, 1 + rand() * 1.5, 1, 0.6 + rand() * 0.9, yaw);
+    m.rotation.x = -Math.PI / 2;
+  }
 
+  // ----- Buildings / storefronts -----
   const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
-  const buildingMat = new THREE.MeshLambertMaterial({ color: "#555a60" });
-  const buildings = makeInstanced(buildingGeo, buildingMat, 40);
-  const roofGeo = new THREE.BoxGeometry(1, 0.1, 1);
-  const roofs = makeInstanced(roofGeo, roof, 40);
+  const roofGeo = new THREE.BoxGeometry(1, 0.12, 1);
+  const windowGeo = new THREE.BoxGeometry(0.6, 0.35, 0.04);
+  const awningGeo = new THREE.BoxGeometry(1, 0.12, 0.35);
+  const colors = ["#686b6d", "#756d63", "#5c6265", "#827970", "#5f5c59", "#777b79", "#6b625e", "#4f575a"];
 
-  let bi = 0;
-  for (let gx = -67.5; gx <= 67.5 && bi < 40; gx += 45) {
-    for (let gz = -67.5; gz <= 67.5 && bi < 40; gz += 45) {
-      const variant = (Math.abs(gx + gz) / 22.5) % 2 < 1;
-      const w1 = variant ? 15 : 11.5;
-      const d1 = variant ? 11.5 : 15;
-      const h1 = 8 + rand() * 18;
-      const offX = variant ? -7 : 5.5;
-      const offZ = variant ? 4.5 : -5.5;
-      const bx = gx + offX;
-      const bz = gz + offZ;
+  // Each 48x48 block gets a landmark-like main building plus a smaller shop.
+  for (let gx = -96; gx <= 96; gx += 48) {
+    for (let gz = -96; gz <= 96; gz += 48) {
+      const roadGap = 9.5;
+      const bx = gx + (rand() > 0.5 ? -roadGap : roadGap);
+      const bz = gz + (rand() > 0.5 ? -roadGap : roadGap);
+      const w = 16 + rand() * 8;
+      const d = 15 + rand() * 8;
+      const h = 8 + rand() * 20;
+      const mat = new THREE.MeshLambertMaterial({ color: colors[Math.floor(rand() * colors.length)] });
+      addBox(scene, buildingGeo, mat, bx, h / 2, bz, w, h, d, rand() > 0.5 ? 0.03 : -0.03, boxes, true);
+      addBox(scene, roofGeo, roof, bx, h + 0.06, bz, w + 0.12, 1, d + 0.12, 0);
 
-      mi.compose(
-        new THREE.Vector3(bx, h1 / 2, bz),
-        mq,
-        new THREE.Vector3(w1, h1, d1),
-      );
-      buildings.setMatrixAt(bi, mi);
-      if (buildings.setColorAt) buildings.setColorAt(bi, new THREE.Color(buildingColors[bi % buildingColors.length]));
-      mi.compose(
-        new THREE.Vector3(bx, h1 + 0.05, bz),
-        mq,
-        new THREE.Vector3(w1 + 0.08, 0.1, d1 + 0.08),
-      );
-      roofs.setMatrixAt(bi, mi);
+      // Window grid on the road-facing edge.
+      const front = bz - d / 2 - 0.025;
+      const rows = Math.max(2, Math.min(5, Math.floor(h / 4)));
+      const cols = Math.max(3, Math.min(6, Math.floor(w / 3)));
+      for (let r = 0; r < rows; r++) {
+        for (let col = 0; col < cols; col++) {
+          const px = bx - w / 2 + (col + 0.6) * (w / cols);
+          const py = 2.0 + r * 3.2;
+          if (py > h - 1) continue;
+          addMesh(scene, windowGeo, glassLight, px, py, front, 1, 1, 1);
+        }
+      }
 
-      boxes.push({
-        minX: bx - w1 / 2,
-        maxX: bx + w1 / 2,
-        minZ: bz - d1 / 2,
-        maxZ: bz + d1 / 2,
-        y0: -0.1,
-        y1: h1,
-      });
-      bi++;
-    }
-  }
-  buildings.count = bi;
-  roofs.count = bi;
-  buildings.instanceMatrix.needsUpdate = true;
-  roofs.instanceMatrix.needsUpdate = true;
-  if (buildings.instanceColor) buildings.instanceColor.needsUpdate = true;
-  scene.add(buildings, roofs);
-
-  // Low storefront blocks keep the streets feeling dense without creating
-  // a wall of inaccessible high-rises.
-  const lowGeo = new THREE.BoxGeometry(1, 1, 1);
-  const lowMat = new THREE.MeshLambertMaterial({ color: "#76736d" });
-  for (let gx = -67.5; gx <= 67.5; gx += 45) {
-    for (let gz = -67.5; gz <= 67.5; gz += 45) {
-      if (rand() < 0.35) continue;
-      const x = gx + (rand() - 0.5) * 8;
-      const z = gz + (rand() - 0.5) * 8;
-      const w = 7 + rand() * 4;
-      const d = 6 + rand() * 4;
-      const h = 3.8 + rand() * 3;
-      addBox(scene, lowGeo, lowMat, x, h / 2, z, w, h, d, boxes, true);
+      // A low shop tucked into a different corner of the block.
+      if (rand() > 0.22) {
+        const sx = gx + (rand() - 0.5) * 15;
+        const sz = gz + (rand() - 0.5) * 15;
+        const sw = 6 + rand() * 4;
+        const sd = 5 + rand() * 3;
+        const sh = 3.2 + rand() * 1.4;
+        const shopMat = rand() > 0.5 ? stucco : plaster;
+        addBox(scene, buildingGeo, shopMat, sx, sh / 2, sz, sw, sh, sd, 0, boxes, true);
+        addMesh(scene, awningGeo, red, sx, sh - 0.25, sz - sd / 2 - 0.12, sw * 0.7, 1, 1, 0);
+        addMesh(scene, windowGeo, glass, sx, 1.55, sz - sd / 2 - 0.05, sw * 0.65, 1.4, 1);
+      }
     }
   }
 
-  // ---------- Street trees / palms ----------
-  const palmCount = 24;
-  const trunkGeo = new THREE.CylinderGeometry(0.12, 0.18, 2.5, 7);
-  const crownGeo = new THREE.ConeGeometry(0.9, 2.0, 8);
-  const trunks = makeInstanced(trunkGeo, trunkMat, palmCount);
-  const crowns = makeInstanced(crownGeo, treeGreen, palmCount);
-  let ti = 0;
-  for (const x of [-98, -53, -8, 37, 82, 101]) {
-    for (const z of [-102, -52, -2, 48, 98]) {
-      if (ti >= palmCount) break;
-      // Keep the center intersection open.
-      if (Math.abs(x) < 12 && Math.abs(z) < 12) continue;
-      mi.compose(new THREE.Vector3(x, 1.25, z), mq, new THREE.Vector3(1, 1, 1));
-      trunks.setMatrixAt(ti, mi);
-      mi.compose(new THREE.Vector3(x, 3.0, z), mq, new THREE.Vector3(1, 0.9, 1));
-      crowns.setMatrixAt(ti, mi);
-      ti++;
-    }
-    if (ti >= palmCount) break;
+  // A low-rise residential edge gives the map the dense mixed-scale silhouette.
+  for (let i = 0; i < 22; i++) {
+    const x = (rand() < 0.5 ? -1 : 1) * (98 + rand() * 15);
+    const z = (rand() - 0.5) * 205;
+    const w = 5 + rand() * 5;
+    const d = 6 + rand() * 6;
+    const h = 3 + rand() * 4;
+    addBox(scene, buildingGeo, rand() > 0.5 ? brick : stucco, x, h / 2, z, w, h, d, 0, boxes, true);
   }
-  trunks.count = ti;
-  crowns.count = ti;
-  trunks.instanceMatrix.needsUpdate = true;
-  crowns.instanceMatrix.needsUpdate = true;
-  scene.add(trunks, crowns);
 
-  // ---------- Streetlights ----------
-  const lightCount = 40;
-  const poleGeo = new THREE.CylinderGeometry(0.045, 0.07, 4.1, 6);
-  const lampGeo = new THREE.SphereGeometry(0.12, 7, 5);
-  const poles = makeInstanced(poleGeo, concrete, lightCount);
-  const lamps = makeInstanced(lampGeo, lampMat, lightCount);
-  let si = 0;
+  // ----- Water tanks / rooftop utility details -----
+  const tankGeo = new THREE.CylinderGeometry(0.45, 0.5, 1.2, 10);
+  const tankMat = new THREE.MeshLambertMaterial({ color: "#4a5660" });
+  for (let i = 0; i < 25; i++) {
+    const x = (rand() - 0.5) * 185;
+    const z = (rand() - 0.5) * 185;
+    const h = 10 + rand() * 16;
+    addMesh(scene, tankGeo, tankMat, x, h + 0.6, z);
+  }
+
+  // ----- Street furniture -----
+  const poleGeo = new THREE.CylinderGeometry(0.05, 0.07, 4.8, 7);
+  const lampGeo = new THREE.SphereGeometry(0.13, 7, 5);
+  const poleCount = 56;
+  const poles = makeInstanced(poleGeo, concrete, poleCount);
+  const lamps = makeInstanced(lampGeo, lamp, poleCount);
+  let li = 0;
   for (const x of roadCenters) {
-    for (const z of [-70, -25, 25, 70]) {
-      if (si >= lightCount) break;
-      const px = x + (x % 90 === 0 ? 4.8 : -4.8);
-      mi.compose(new THREE.Vector3(px, 2.05, z), mq, ms);
-      poles.setMatrixAt(si, mi);
-      mi.compose(new THREE.Vector3(px, 4.18, z), mq, ms);
-      lamps.setMatrixAt(si, mi);
-      si++;
+    for (const z of [-96, -48, 0, 48, 96]) {
+      if (li >= poleCount) break;
+      const px = x + (x >= 0 ? -4.8 : 4.8);
+      mi.compose(new THREE.Vector3(px, 2.4, z), mq, ms);
+      poles.setMatrixAt(li, mi);
+      mi.compose(new THREE.Vector3(px, 4.82, z), mq, ms);
+      lamps.setMatrixAt(li, mi);
+      li++;
     }
-    if (si >= lightCount) break;
   }
-  poles.count = si;
-  lamps.count = si;
+  poles.count = lamps.count = li;
   poles.instanceMatrix.needsUpdate = true;
   lamps.instanceMatrix.needsUpdate = true;
   scene.add(poles, lamps);
 
-  // ---------- Parked cars ----------
-  const carBodyGeo = new THREE.BoxGeometry(1.9, 0.46, 3.8);
-  const carCabGeo = new THREE.BoxGeometry(1.48, 0.48, 1.75);
-  const carWheelGeo = new THREE.CylinderGeometry(0.31, 0.31, 0.18, 10);
-  carWheelGeo.rotateZ(Math.PI / 2);
-  const parkedBody = makeInstanced(carBodyGeo, new THREE.MeshLambertMaterial({ color: "#607080" }), 40);
-  const parkedCab = makeInstanced(carCabGeo, glass, 40);
-  const parkedWheel = makeInstanced(carWheelGeo, new THREE.MeshLambertMaterial({ color: "#16181c" }), 160);
+  // Trees along selected sidewalks.
+  const trunkGeo = new THREE.CylinderGeometry(0.16, 0.2, 2.2, 7);
+  const crownGeo = new THREE.SphereGeometry(0.9, 8, 6);
+  const trunks = makeInstanced(trunkGeo, trunk, 44);
+  const crowns = makeInstanced(crownGeo, treeGreen, 44);
+  let ti = 0;
+  for (const x of [-101, -53, -5, 43, 91]) {
+    for (const z of [-102, -54, -6, 42, 90]) {
+      if (ti >= 44) break;
+      if ((Math.abs(x) < 10 && Math.abs(z) < 10) || rand() < 0.22) continue;
+      mi.compose(new THREE.Vector3(x + (rand() - 0.5) * 2, 1.1, z), mq, ms);
+      trunks.setMatrixAt(ti, mi);
+      mi.compose(new THREE.Vector3(x + (rand() - 0.5) * 2, 3.0, z), mq, new THREE.Vector3(1, 0.9, 1));
+      crowns.setMatrixAt(ti, mi);
+      ti++;
+    }
+    if (ti >= 44) break;
+  }
+  trunks.count = crowns.count = ti;
+  trunks.instanceMatrix.needsUpdate = true;
+  crowns.instanceMatrix.needsUpdate = true;
+  scene.add(trunks, crowns);
 
-  const parkedColors = ["#bd403a", "#3b6fa8", "#d1a52e", "#8a8f96", "#414950", "#f0f0ea", "#7d4f77", "#34725c"];
+  // ----- Parked cars -----
+  const carBodyGeo = new THREE.BoxGeometry(1.9, 0.46, 3.8);
+  const carCabGeo = new THREE.BoxGeometry(1.45, 0.43, 1.7);
+  const carWheelGeo = new THREE.CylinderGeometry(0.30, 0.30, 0.18, 10);
+  carWheelGeo.rotateZ(Math.PI / 2);
+  const parkedBody = makeInstanced(carBodyGeo, new THREE.MeshLambertMaterial({ color: "#607080" }), 72);
+  const parkedCab = makeInstanced(carCabGeo, glass, 72);
+  const parkedWheel = makeInstanced(carWheelGeo, darkConcrete, 288);
+  const parkedColors = ["#b5423b","#3d6ea8","#d2aa2b","#8d9296","#454b52","#ecebe3","#724f75","#3b715d","#7f694f"];
+
   let pi = 0;
   let wi = 0;
+  const addParkedCar = (x: number, z: number, yaw: number) => {
+    if (pi >= parkedBody.count) return;
+    mq.setFromAxisAngle(new THREE.Vector3(0,1,0), yaw);
+    mi.compose(new THREE.Vector3(x, 0.4, z), mq, ms);
+    parkedBody.setMatrixAt(pi, mi);
+    parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length]));
 
-  const roadParkingZ = [-78, -54, -18, 18, 54, 78];
-  for (const x of roadCenters) {
-    for (const z of roadParkingZ) {
-      if (Math.abs(x) < 1 && Math.abs(z) < 10) continue;
-      const yaw = ((pi + 1) % 2) ? 0 : Math.PI;
-      const side = pi % 2 === 0 ? -3.8 : 3.8;
-      const p = { x: x + side, z };
-      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-      mi.compose(new THREE.Vector3(p.x, 0.42, p.z), mq, new THREE.Vector3(1, 1, 1));
-      parkedBody.setMatrixAt(pi, mi);
-      if (parkedBody.setColorAt) parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length]));
-      const cab = localToWorld(p.x, p.z, yaw, 0, -0.25);
-      mi.compose(new THREE.Vector3(cab.x, 0.84, cab.z), mq, new THREE.Vector3(1, 1, 1));
-      parkedCab.setMatrixAt(pi, mi);
-      const wheelOffsets = [[-0.86, 1.2], [0.86, 1.2], [-0.86, -1.2], [0.86, -1.2]];
-      for (const [lx, lz] of wheelOffsets) {
-        const wpos = localToWorld(p.x, p.z, yaw, lx, lz);
-        mi.compose(new THREE.Vector3(wpos.x, 0.24, wpos.z), mq, new THREE.Vector3(1, 1, 1));
-        parkedWheel.setMatrixAt(wi++, mi);
-      }
-      pi++;
-      if (pi >= 40) break;
+    const cab = localToWorld(x, z, yaw, 0, -0.25);
+    mi.compose(new THREE.Vector3(cab.x, 0.82, cab.z), mq, ms);
+    parkedCab.setMatrixAt(pi, mi);
+
+    for (const [lx,lz] of [[-0.86,1.15],[0.86,1.15],[-0.86,-1.15],[0.86,-1.15]]) {
+      const p = localToWorld(x, z, yaw, lx, lz);
+      mi.compose(new THREE.Vector3(p.x,0.24,p.z),mq,ms);
+      parkedWheel.setMatrixAt(wi++,mi);
     }
-    if (pi >= 40) break;
-  }
+    pi++;
+  };
 
-  for (const z of [-90, -45, 0, 45, 90]) {
-    for (const x of [-76, -38, 38, 76]) {
-      if (pi >= 40) break;
-      const yaw = Math.PI / 2;
-      const side = pi % 2 === 0 ? -3.8 : 3.8;
-      const p = { x, z: z + side };
-      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-      mi.compose(new THREE.Vector3(p.x, 0.42, p.z), mq, new THREE.Vector3(1, 1, 1));
-      parkedBody.setMatrixAt(pi, mi);
-      if (parkedBody.setColorAt) parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length]));
-      const cab = localToWorld(p.x, p.z, yaw, 0, -0.25);
-      mi.compose(new THREE.Vector3(cab.x, 0.84, cab.z), mq, new THREE.Vector3(1, 1, 1));
-      parkedCab.setMatrixAt(pi, mi);
-      const wheelOffsets = [[-0.86, 1.2], [0.86, 1.2], [-0.86, -1.2], [0.86, -1.2]];
-      for (const [lx, lz] of wheelOffsets) {
-        const wpos = localToWorld(p.x, p.z, yaw, lx, lz);
-        mi.compose(new THREE.Vector3(wpos.x, 0.24, wpos.z), mq, new THREE.Vector3(1, 1, 1));
-        parkedWheel.setMatrixAt(wi++, mi);
-      }
-      pi++;
+  for (const z of [-108,-84,-60,-36,-12,12,36,60,84,108]) {
+    for (const x of roadCenters) {
+      if (pi >= 72) break;
+      addParkedCar(x + (pi % 2 ? 3.7 : -3.7), z, pi % 2 ? 0 : Math.PI);
     }
   }
-
+  for (const x of [-108,-84,-60,-36,-12,12,36,60,84,108]) {
+    for (const z of roadCenters) {
+      if (pi >= 72) break;
+      addParkedCar(x, z + (pi % 2 ? 3.7 : -3.7), pi % 2 ? Math.PI/2 : -Math.PI/2);
+    }
+  }
   parkedBody.count = pi;
   parkedCab.count = pi;
   parkedWheel.count = wi;
   parkedBody.instanceMatrix.needsUpdate = true;
   parkedCab.instanceMatrix.needsUpdate = true;
   parkedWheel.instanceMatrix.needsUpdate = true;
-  if (parkedBody.instanceColor) parkedBody.instanceColor.needsUpdate = true;
+  parkedBody.instanceColor.needsUpdate = true;
   scene.add(parkedBody, parkedCab, parkedWheel);
 
-  // ---------- Parked motorcycles ----------
-  const bikeBodyGeo = new THREE.BoxGeometry(0.34, 0.26, 1.45);
-  const bikeSeatGeo = new THREE.BoxGeometry(0.38, 0.12, 0.5);
-  const bikeWheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.1, 9);
-  bikeWheelGeo.rotateZ(Math.PI / 2);
-  const bikeBarGeo = new THREE.BoxGeometry(0.58, 0.06, 0.06);
-  const parkedBikeBody = makeInstanced(bikeBodyGeo, new THREE.MeshLambertMaterial({ color: "#7a2734" }), 36);
-  const parkedBikeSeat = makeInstanced(bikeSeatGeo, new THREE.MeshLambertMaterial({ color: "#202226" }), 36);
-  const parkedBikeWheel = makeInstanced(bikeWheelGeo, new THREE.MeshLambertMaterial({ color: "#15171a" }), 72);
-  const parkedBikeBar = makeInstanced(bikeBarGeo, concrete, 36);
-  const bikeColors = ["#bd3746", "#d4a321", "#294e83", "#3d6d55", "#44464a", "#8b5c2b"];
+  // ----- Motorcycles everywhere -----
+  const motoBodyGeo = new THREE.BoxGeometry(0.36, 0.25, 1.4);
+  const motoSeatGeo = new THREE.BoxGeometry(0.40, 0.12, 0.5);
+  const motoWheelGeo = new THREE.CylinderGeometry(0.27, 0.27, 0.10, 9);
+  motoWheelGeo.rotateZ(Math.PI / 2);
+  const motoBarGeo = new THREE.BoxGeometry(0.58, 0.055, 0.06);
+  const motoBody = makeInstanced(motoBodyGeo, new THREE.MeshLambertMaterial({ color: "#7b2d3b" }), 78);
+  const motoSeat = makeInstanced(motoSeatGeo, darkConcrete, 78);
+  const motoWheel = makeInstanced(motoWheelGeo, darkConcrete, 156);
+  const motoBar = makeInstanced(motoBarGeo, concrete, 78);
+  const motoColors = ["#c0393d","#d4a52e","#325c96","#3d745a","#45474a","#8a5d32","#7e3e68"];
   let pbi = 0;
   let pbw = 0;
-  for (const z of roadCenters) {
-    for (const x of [-76, -50, -24, 24, 50, 76]) {
-      if (pbi >= 36) break;
-      const yaw = Math.PI / 2;
-      const side = pbi % 2 === 0 ? -4.8 : 4.8;
-      const p = { x, z: z + side };
-      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-      mi.compose(new THREE.Vector3(p.x, 0.48, p.z), mq, new THREE.Vector3(1, 1, 1));
-      parkedBikeBody.setMatrixAt(pbi, mi);
-      if (parkedBikeBody.setColorAt) parkedBikeBody.setColorAt(pbi, new THREE.Color(bikeColors[pbi % bikeColors.length]));
-      const seat = localToWorld(p.x, p.z, yaw, 0, -0.12);
-      mi.compose(new THREE.Vector3(seat.x, 0.67, seat.z), mq, new THREE.Vector3(1, 1, 1));
-      parkedBikeSeat.setMatrixAt(pbi, mi);
-      const bar = localToWorld(p.x, p.z, yaw, 0, 0.65);
-      mi.compose(
-        new THREE.Vector3(bar.x, 0.95, bar.z),
-        mq,
-        new THREE.Vector3(1, 1, 1),
-      );
-      parkedBikeBar.setMatrixAt(pbi, mi);
-      for (const lz of [-0.72, 0.68]) {
-        const wpos = localToWorld(p.x, p.z, yaw, 0, lz);
-        mi.compose(new THREE.Vector3(wpos.x, 0.3, wpos.z), mq, new THREE.Vector3(1, 1, 1));
-        parkedBikeWheel.setMatrixAt(pbw++, mi);
-      }
-      pbi++;
+
+  const addMoto = (x: number, z: number, yaw: number) => {
+    if (pbi >= motoBody.count) return;
+    mq.setFromAxisAngle(new THREE.Vector3(0,1,0), yaw);
+    mi.compose(new THREE.Vector3(x,0.46,z),mq,ms);
+    motoBody.setMatrixAt(pbi,mi);
+    motoBody.setColorAt(pbi,new THREE.Color(motoColors[pbi % motoColors.length]));
+    const seat = localToWorld(x,z,yaw,0,-0.12);
+    mi.compose(new THREE.Vector3(seat.x,0.66,seat.z),mq,ms);
+    motoSeat.setMatrixAt(pbi,mi);
+    const bar = localToWorld(x,z,yaw,0,0.63);
+    mi.compose(new THREE.Vector3(bar.x,0.92,bar.z),mq,ms);
+    motoBar.setMatrixAt(pbi,mi);
+    for (const lz of [-0.68,0.66]) {
+      const wp = localToWorld(x,z,yaw,0,lz);
+      mi.compose(new THREE.Vector3(wp.x,0.27,wp.z),mq,ms);
+      motoWheel.setMatrixAt(pbw++,mi);
     }
-    if (pbi >= 36) break;
-  }
-  parkedBikeBody.count = pbi;
-  parkedBikeSeat.count = pbi;
-  parkedBikeBar.count = pbi;
-  parkedBikeWheel.count = pbw;
-  parkedBikeBody.instanceMatrix.needsUpdate = true;
-  parkedBikeSeat.instanceMatrix.needsUpdate = true;
-  parkedBikeBar.instanceMatrix.needsUpdate = true;
-  parkedBikeWheel.instanceMatrix.needsUpdate = true;
-  if (parkedBikeBody.instanceColor) parkedBikeBody.instanceColor.needsUpdate = true;
-  scene.add(parkedBikeBody, parkedBikeSeat, parkedBikeBar, parkedBikeWheel);
+    pbi++;
+  };
 
-  // A few low barriers around side alleys provide cover and visual breakup.
-  const barrierGeo = new THREE.BoxGeometry(1, 1, 1);
-  for (const [x, z, w, d] of [
-    [-104, 72, 6, 1.1],
-    [-104, -72, 6, 1.1],
-    [104, 72, 6, 1.1],
-    [104, -72, 6, 1.1],
-    [64, 106, 1.1, 6],
-    [-64, 106, 1.1, 6],
-  ]) {
-    addBox(scene, barrierGeo, concrete, x, 0.55, z, w, 1.1, d, boxes, true);
+  for (const z of [-102,-78,-54,-30,-6,18,42,66,90,114]) {
+    for (const x of [-104,-80,-56,-32,-8,16,40,64,88,112]) {
+      if (pbi >= 78) break;
+      addMoto(x + (pbi % 2 ? 4.3 : -4.3), z, Math.PI/2);
+    }
+    if (pbi >= 78) break;
+  }
+  motoBody.count = pbi;
+  motoSeat.count = pbi;
+  motoBar.count = pbi;
+  motoWheel.count = pbw;
+  motoBody.instanceMatrix.needsUpdate = true;
+  motoSeat.instanceMatrix.needsUpdate = true;
+  motoBar.instanceMatrix.needsUpdate = true;
+  motoWheel.instanceMatrix.needsUpdate = true;
+  motoBody.instanceColor.needsUpdate = true;
+  scene.add(motoBody,motoSeat,motoBar,motoWheel);
+
+  // Alley clutter: dumpsters and barriers.
+  const dumpGeo = new THREE.BoxGeometry(1,1,1);
+  for (const [x,z] of [[-34,17],[31,-19],[-78,31],[78,-31],[31,79],[-31,-79]]) {
+    addBox(scene,dumpGeo,darkConcrete,x,0.7,z,1.7,1.4,1.1,0,boxes,false);
   }
 
-  // Kept for engine compatibility; the old grass animation no longer costs
-  // anything on the frame because the new map has no grass layer.
-  const cityTime = { value: 0 };
-  return { boxes, grassTime: cityTime };
+  // Small edge barriers keep the arena bounded visually.
+  for (const [x,z,w,d] of [
+    [-116,0,1,16],[116,0,1,16],[0,-116,16,1],[0,116,16,1],
+  ]) addBox(scene,dumpGeo,concrete,x,0.55,z,w,1.1,d,0,boxes,true);
+
+  // Compatibility time uniform for the engine.
+  return { boxes, grassTime: { value: 0 } };
 }
 
-/** Ray vs AABB, returns t or -1 */
 export function rayBox(o: THREE.Vector3, d: THREE.Vector3, b: Box, maxT: number): number {
   let tmin = 0;
   let tmax = maxT;
-  const mins = [b.minX, b.y0, b.minZ];
-  const maxs = [b.maxX, b.y1, b.maxZ];
-  const os = [o.x, o.y, o.z];
-  const ds = [d.x, d.y, d.z];
-  for (let i = 0; i < 3; i++) {
-    if (Math.abs(ds[i]) < 1e-8) {
-      if (os[i] < mins[i] || os[i] > maxs[i]) return -1;
+  const mins = [b.minX,b.y0,b.minZ];
+  const maxs = [b.maxX,b.y1,b.maxZ];
+  const os = [o.x,o.y,o.z];
+  const ds = [d.x,d.y,d.z];
+  for (let i=0;i<3;i++) {
+    if (Math.abs(ds[i])<1e-8) {
+      if (os[i]<mins[i] || os[i]>maxs[i]) return -1;
     } else {
-      let t1 = (mins[i] - os[i]) / ds[i];
-      let t2 = (maxs[i] - os[i]) / ds[i];
-      if (t1 > t2) [t1, t2] = [t2, t1];
-      tmin = Math.max(tmin, t1);
-      tmax = Math.min(tmax, t2);
-      if (tmin > tmax) return -1;
+      let t1=(mins[i]-os[i])/ds[i];
+      let t2=(maxs[i]-os[i])/ds[i];
+      if (t1>t2) [t1,t2]=[t2,t1];
+      tmin=Math.max(tmin,t1);
+      tmax=Math.min(tmax,t2);
+      if (tmin>tmax) return -1;
     }
   }
   return tmin;
 }
 
 export function rayTerrain(o: THREE.Vector3, d: THREE.Vector3, maxT: number): number {
-  if (Math.abs(d.y) < 1e-8) return -1;
-  const t = -o.y / d.y;
-  return t > 0 && t < maxT ? t : -1;
+  if (Math.abs(d.y)<1e-8) return -1;
+  const t=-o.y/d.y;
+  return t>0 && t<maxT ? t : -1;
 }
