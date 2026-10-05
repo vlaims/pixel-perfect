@@ -178,6 +178,8 @@ export function buildWorld(scene: THREE.Scene) {
   laneMarksZ.instanceMatrix.needsUpdate = true;
   scene.add(laneMarksX, laneMarksZ);
 
+  mq.identity();
+
   // Double yellow center lines on selected boulevards.
   const yellowGeo = new THREE.BoxGeometry(0.08, 0.023, 240);
   const yellow = makeInstanced(yellowGeo, lineYellow, roadCenters.length);
@@ -202,6 +204,8 @@ export function buildWorld(scene: THREE.Scene) {
   yellowZ.count = yzi;
   yellowZ.instanceMatrix.needsUpdate = true;
   scene.add(yellowZ);
+
+  mq.identity();
 
   // Crosswalk bars at all large intersections.
   const crossGeo = new THREE.BoxGeometry(0.75, 0.026, 3.4);
@@ -387,9 +391,11 @@ export function buildWorld(scene: THREE.Scene) {
       const yaw = ((pi + 1) % 2) ? 0 : Math.PI;
       const side = pi % 2 === 0 ? -3.8 : 3.8;
       const p = { x: x + side, z };
+      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
       mi.compose(new THREE.Vector3(p.x, 0.42, p.z), mq, new THREE.Vector3(1, 1, 1));
       parkedBody.setMatrixAt(pi, mi);
-      if (parkedBody.setColorAt) parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length])));
+      if (parkedBody.setColorAt) parkedBody.setColorAt(pi, new THREE.Color(parkedColors[pi % parkedColors.length]));
       const cab = localToWorld(p.x, p.z, yaw, 0, -0.25);
       mi.compose(new THREE.Vector3(cab.x, 0.84, cab.z), mq, new THREE.Vector3(1, 1, 1));
       parkedCab.setMatrixAt(pi, mi);
@@ -455,9 +461,10 @@ export function buildWorld(scene: THREE.Scene) {
       const yaw = Math.PI / 2;
       const side = pbi % 2 === 0 ? -4.8 : 4.8;
       const p = { x, z: z + side };
+      mq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
       mi.compose(new THREE.Vector3(p.x, 0.48, p.z), mq, new THREE.Vector3(1, 1, 1));
       parkedBikeBody.setMatrixAt(pbi, mi);
-      if (parkedBikeBody.setColorAt) parkedBikeBody.setColorAt(pbi, new THREE.Color(bikeColors[pbi % bikeColors.length])));
+      if (parkedBikeBody.setColorAt) parkedBikeBody.setColorAt(pbi, new THREE.Color(bikeColors[pbi % bikeColors.length]));
       const seat = localToWorld(p.x, p.z, yaw, 0, -0.12);
       mi.compose(new THREE.Vector3(seat.x, 0.67, seat.z), mq, new THREE.Vector3(1, 1, 1));
       parkedBikeSeat.setMatrixAt(pbi, mi);
