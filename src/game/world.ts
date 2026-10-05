@@ -109,7 +109,8 @@ export function buildWorld(scene: THREE.Scene) {
   const concrete = new THREE.MeshLambertMaterial({ color: "#6a6d70" });
   const darkConcrete = new THREE.MeshLambertMaterial({ color: "#3b3e42" });
   const glass = new THREE.MeshLambertMaterial({ color: "#385563" });
-  const glassLight = new THREE.MeshBasicMaterial({ color: "#9bbac7" });
+  const glassLight = new THREE.MeshLambertMaterial({ color: "#60727a" });
+  const windowWarm = new THREE.MeshBasicMaterial({ color: "#b79a69" });
   const roof = new THREE.MeshLambertMaterial({ color: "#3a3b3c" });
   const brick = new THREE.MeshLambertMaterial({ color: "#8b6150" });
   const plaster = new THREE.MeshLambertMaterial({ color: "#7a7a72" });
@@ -258,6 +259,9 @@ export function buildWorld(scene: THREE.Scene) {
   const doorGeo = new THREE.BoxGeometry(0.9, 1.8, 0.08);
   const awningGeo = new THREE.BoxGeometry(1, 0.12, 0.45);
   const signGeo = new THREE.BoxGeometry(2.8, 0.45, 0.08);
+  const balconyGeo = new THREE.BoxGeometry(1.8, 0.10, 0.75);
+  const balconyRailGeo = new THREE.BoxGeometry(1.8, 0.42, 0.055);
+  const shutterGeo = new THREE.BoxGeometry(0.05, 0.42, 0.72);
   const colors = ["#676a6d","#756d63","#5d6367","#81786f","#625d59","#747a78","#6b625c","#50585c"];
 
   function addBuilding(
@@ -274,7 +278,10 @@ export function buildWorld(scene: THREE.Scene) {
       for(let r=0;r<rows;r++) for(let col=0;col<cols;col++){
         const px=x-w/2+(col+0.55)*(w/cols);
         const py=1.9+r*3.0;
-        if(py<h-1.1) addMesh(scene,windowGeo,glassLight,px,py,fz);
+        if(py<h-1.1) {
+          const wm = ((r + col + Math.round(x * 0.1) + Math.round(z * 0.1)) % 5 === 0) ? windowWarm : glassLight;
+          addMesh(scene,windowGeo,wm,px,py,fz);
+        }
       }
       if(h<9){
         addMesh(scene,doorGeo,darkConcrete,x,0.9,fz-0.015);
@@ -288,7 +295,10 @@ export function buildWorld(scene: THREE.Scene) {
       for(let r=0;r<rows;r++) for(let col=0;col<cols;col++){
         const px=x-w/2+(col+0.55)*(w/cols);
         const py=1.9+r*3.0;
-        if(py<h-1.1) addMesh(scene,windowGeo,glassLight,px,py,fz);
+        if(py<h-1.1) {
+          const wm = ((r + col + Math.round(x * 0.1) + Math.round(z * 0.1) + 1) % 5 === 0) ? windowWarm : glassLight;
+          addMesh(scene,windowGeo,wm,px,py,fz);
+        }
       }
       if(h<9){
         addMesh(scene,doorGeo,darkConcrete,x,0.9,fz+0.015);
@@ -313,6 +323,33 @@ export function buildWorld(scene: THREE.Scene) {
         const py=1.9+r*3.0;
         if(py<h-1.1) addMesh(scene,windowGeo,glassLight,fx,py,pz,1,1,1,Math.PI/2);
       }
+    }
+  }
+
+  // Extra façade depth: balconies, shutters and storefront trim.
+  // These stay sparse so the city reads as lived-in without creating thousands of meshes.
+  const buildingSamples = [];
+  for (const bx0 of [-67.5,-22.5,22.5,67.5]) {
+    for (const bz0 of [-67.5,-22.5,22.5,67.5]) buildingSamples.push([bx0,bz0]);
+  }
+  for (let i = 0; i < buildingSamples.length; i++) {
+    const [bx0,bz0] = buildingSamples[i];
+    const front = i % 4;
+    const px = bx0 + (i % 2 ? 5.5 : -5.5);
+    const pz = bz0 - 6.35;
+    const py = 5.0 + (i % 3) * 2.0;
+    if (front === 0) {
+      addMesh(scene, balconyGeo, darkConcrete, px, py, pz);
+      addMesh(scene, balconyRailGeo, concrete, px, py + 0.25, pz - 0.34);
+    } else if (front === 1) {
+      addMesh(scene, balconyGeo, darkConcrete, px, py, bz0 + 6.35);
+      addMesh(scene, balconyRailGeo, concrete, px, py + 0.25, bz0 + 6.69);
+    } else if (front === 2) {
+      addMesh(scene, balconyGeo, darkConcrete, bx0 - 6.35, py, bz0, 1, 1, 1, Math.PI / 2);
+      addMesh(scene, balconyRailGeo, concrete, bx0 - 6.69, py + 0.25, bz0, 1, 1, 1, Math.PI / 2);
+    } else {
+      addMesh(scene, balconyGeo, darkConcrete, bx0 + 6.35, py, bz0, 1, 1, 1, Math.PI / 2);
+      addMesh(scene, balconyRailGeo, concrete, bx0 + 6.69, py + 0.25, bz0, 1, 1, 1, Math.PI / 2);
     }
   }
 
@@ -382,28 +419,35 @@ export function buildWorld(scene: THREE.Scene) {
   lamps.instanceMatrix.needsUpdate = true;
   scene.add(poles, lamps);
 
-  // Trees along selected sidewalks.
-  const trunkGeo = new THREE.CylinderGeometry(0.16, 0.2, 2.2, 7);
-  const crownGeo = new THREE.SphereGeometry(0.9, 8, 6);
-  const trunks = makeInstanced(trunkGeo, trunk, 44);
-  const crowns = makeInstanced(crownGeo, treeGreen, 44);
+  // Trees: layered low-poly crowns instead of single smooth spheres.
+  const trunkGeo = new THREE.CylinderGeometry(0.15, 0.20, 2.2, 7);
+  const crownGeo = new THREE.IcosahedronGeometry(0.92, 1);
+  const crownTopGeo = new THREE.IcosahedronGeometry(0.65, 1);
+  const trunks = makeInstanced(trunkGeo, trunk, 34);
+  const crowns = makeInstanced(crownGeo, treeGreen, 34);
+  const crownsTop = makeInstanced(crownTopGeo, treeDark, 34);
   let ti = 0;
   for (const x of [-101, -53, -5, 43, 91]) {
     for (const z of [-102, -54, -6, 42, 90]) {
-      if (ti >= 44) break;
-      if ((Math.abs(x) < 10 && Math.abs(z) < 10) || rand() < 0.22) continue;
-      mi.compose(new THREE.Vector3(x + (rand() - 0.5) * 2, 1.1, z), mq, ms);
+      if (ti >= 34) break;
+      if ((Math.abs(x) < 10 && Math.abs(z) < 10) || rand() < 0.25) continue;
+      const tx = x + (rand() - 0.5) * 2;
+      const tz = z + (rand() - 0.5) * 2;
+      mi.compose(new THREE.Vector3(tx, 1.1, tz), mq, ms);
       trunks.setMatrixAt(ti, mi);
-      mi.compose(new THREE.Vector3(x + (rand() - 0.5) * 2, 3.0, z), mq, new THREE.Vector3(1, 0.9, 1));
+      mi.compose(new THREE.Vector3(tx, 2.85, tz), mq, new THREE.Vector3(1.0, 0.88, 1.0));
       crowns.setMatrixAt(ti, mi);
+      mi.compose(new THREE.Vector3(tx + 0.12, 3.65, tz - 0.05), mq, new THREE.Vector3(0.78, 0.72, 0.78));
+      crownsTop.setMatrixAt(ti, mi);
       ti++;
     }
-    if (ti >= 44) break;
+    if (ti >= 34) break;
   }
-  trunks.count = crowns.count = ti;
+  trunks.count = crowns.count = crownsTop.count = ti;
   trunks.instanceMatrix.needsUpdate = true;
   crowns.instanceMatrix.needsUpdate = true;
-  scene.add(trunks, crowns);
+  crownsTop.instanceMatrix.needsUpdate = true;
+  scene.add(trunks, crowns, crownsTop);
 
   // ----- Low-cost Zona Leste visual details -----
   // Overhead utility wiring gives the streets a denser residential/commercial silhouette.
@@ -463,6 +507,16 @@ export function buildWorld(scene: THREE.Scene) {
   for (const [x, z, yaw] of [[-101,-16,0],[-53,32,Math.PI/2],[43,-64,0],[91,80,Math.PI/2]]) {
     addMesh(scene, signPostGeo, signPostMat, x, 0.85, z);
     addMesh(scene, signGeo2, signMat, x, 1.72, z, 1, 1, 1, yaw);
+  }
+
+  // Subtle road wear: sparse cracks and patched seams, all flat geometry.
+  const crackMat = new THREE.MeshBasicMaterial({ color: "#202225" });
+  const crackGeo = new THREE.BoxGeometry(0.045, 0.018, 1.8);
+  for (let i = 0; i < 26; i++) {
+    const cx = (rand() - 0.5) * 215;
+    const cz = (rand() - 0.5) * 215;
+    const cm = addMesh(scene, crackGeo, crackMat, cx, 0.033, cz, 1, 1, 1, rand() * Math.PI);
+    cm.rotation.x = -Math.PI / 2;
   }
 
   // Alley clutter: dumpsters and barriers.
