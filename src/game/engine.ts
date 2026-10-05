@@ -707,6 +707,8 @@ export class Engine {
   }
 
   tryShoot(a: Actor, inp: Input, origin: THREE.Vector3, dir: THREE.Vector3, minT: number) {
+    // The player can only fire while holding the scope/aim button.
+    if (a.isPlayer && !inp.scope) return;
     if (!a.alive || inp.radio || a.radio > 0.5 || a.rolling > 0 || a.reloadT > 0) return;
     const w = WEAPONS[a.weapon];
     const want = w.auto ? inp.shoot : inp.shootPressed;
