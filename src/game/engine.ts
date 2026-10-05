@@ -971,7 +971,7 @@ export class Engine {
       a.root.rotation.y = a.vehicle ? a.vehicle.yaw : a.yaw;
       a.phase += dt * (a.moving > 0 ? 2 + a.moving * 1.45 : 0);
       const aimTarget = a.alive && (a.scoping || a.input.shoot || a.cooldown > -0.6) && a.radio < 0.5 ? 1 : 0;
-      a.aimBlend += (aimTarget - a.aimBlend) * (1 - Math.exp(-16 * dt));
+      a.aimBlend += (aimTarget - a.aimBlend) * (1 - Math.exp(-80 * dt));
 
       if (!a.alive) {
         const k = Math.min(1, a.deadT / 0.35);
