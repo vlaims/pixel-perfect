@@ -91,7 +91,7 @@ export function buildWorld(scene: THREE.Scene) {
     }
   });
   groundTex.repeat.set(40, 40);
-  const geo = new THREE.PlaneGeometry(240, 240, 180, 180);
+  const geo = new THREE.PlaneGeometry(240, 240, 100, 100);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)));
