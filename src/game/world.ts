@@ -312,16 +312,6 @@ export function buildWorld(scene: THREE.Scene) {
     addBox(scene, buildingGeo, rand() > 0.5 ? brick : stucco, x, h / 2, z, w, h, d, 0, boxes, true);
   }
 
-  // ----- Water tanks / rooftop utility details -----
-  const tankGeo = new THREE.CylinderGeometry(0.45, 0.5, 1.2, 10);
-  const tankMat = new THREE.MeshLambertMaterial({ color: "#4a5660" });
-  for (let i = 0; i < 25; i++) {
-    const x = (rand() - 0.5) * 185;
-    const z = (rand() - 0.5) * 185;
-    const h = 10 + rand() * 16;
-    addMesh(scene, tankGeo, tankMat, x, h + 0.6, z);
-  }
-
   // ----- Street furniture -----
   const poleGeo = new THREE.CylinderGeometry(0.05, 0.07, 4.8, 7);
   const lampGeo = new THREE.SphereGeometry(0.13, 7, 5);
