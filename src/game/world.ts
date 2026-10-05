@@ -292,7 +292,8 @@ export function rayBox(o: THREE.Vector3, d: THREE.Vector3, b: Box, maxT: number)
 }
 
 export function rayTerrain(o: THREE.Vector3, d: THREE.Vector3, maxT: number): number {
-  const step = 0.6;
+  // Coarse march + short binary refinement keeps hits accurate while avoiding thousands of height samples per shot.
+  const step = 2.0;
   let prevT = 0;
   for (let t = step; t < maxT; t += step) {
     const y = o.y + d.y * t;
@@ -300,7 +301,7 @@ export function rayTerrain(o: THREE.Vector3, d: THREE.Vector3, maxT: number): nu
       // refine
       let a = prevT;
       let b = t;
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 4; i++) {
         const m = (a + b) / 2;
         if (o.y + d.y * m < heightAt(o.x + d.x * m, o.z + d.z * m)) b = m;
         else a = m;
