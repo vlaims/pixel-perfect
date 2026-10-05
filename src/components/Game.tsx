@@ -56,7 +56,15 @@ export function Game() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     let disposed = false;
-    const engine = new Engine(canvas);
+    let engine: Engine;
+    try {
+      engine = new Engine(canvas);
+    } catch (err) {
+      console.error("Failed to initialize game engine", err);
+      setError(err instanceof Error ? err.message : "Failed to initialize the game");
+      hudStore.set({ loading: false });
+      return;
+    }
     engineRef.current = engine;
     hudStore.set({ loading: true });
 
