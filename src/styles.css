@@ -30,9 +30,7 @@
 .settings-panel{display:flex;flex-direction:column;gap:15px}.settings-panel label{display:flex;flex-direction:column;gap:7px;color:#bfc7d4}.settings-panel select,.settings-panel input[type=number]{background:#11151c;color:#fff;border:1px solid #343b48;padding:8px}.settings-panel input[type=range]{width:100%;accent-color:#2d7cff}.settings-panel output{align-self:flex-end;color:#fff;font-family:monospace}.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.settings-grid input[type=color]{height:36px;padding:2px;width:100%;background:#11151c;border:1px solid #343b48}.settings-check{display:grid!important;grid-template-columns:1fr auto;align-items:center}.settings-check input{width:18px;height:18px}
 .game-crosshair{z-index:9996}.game-crosshair.inverted{border-radius:50%;background:#fff}.game-crosshair.inverted span{background:#000!important}.game-crosshair.cross span{width:2px;height:18px;box-shadow:none}
 @media(max-width:560px){.game-settings{min-width:0;width:calc(100vw - 32px)}.settings-grid{grid-template-columns:1fr}}
-.game-hitmarker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:bold 30px/1 Arial;color:#fff;text-shadow:0 0 2px #000;pointer-events:none;animation:hitFade .1s linear forwards;z-index:9997;opacity:1!important;mix-blend-mode:normal}
-.game-hitmarker.head{color:#f00}
-@keyframes hitFade{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(1.12)}}
+to{opacity:0;transform:translate(-50%,-50%) scale(1.12)}}
 
 
 /* Refined settings UI */
@@ -185,4 +183,38 @@
 @media(max-width:520px){
   .settings-grid{grid-template-columns:1fr}
   .settings-content{padding:18px}
+}
+
+/* Compact GTA/FiveM-style impact marker: four short diagonal ticks. */
+.game-hitmarker{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:14px;
+  height:14px;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  z-index:9997;
+  opacity:1;
+  animation:hitFade .2s cubic-bezier(.2,.8,.2,1) forwards;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.85));
+}
+.game-hitmarker i{
+  position:absolute;
+  display:block;
+  width:5px;
+  height:1.5px;
+  border-radius:1px;
+  background:#fff;
+  box-shadow:0 0 1px rgba(0,0,0,.9);
+}
+.game-hitmarker i:nth-child(1){left:0;top:3px;transform:rotate(45deg);transform-origin:left center}
+.game-hitmarker i:nth-child(2){right:0;top:3px;transform:rotate(-45deg);transform-origin:right center}
+.game-hitmarker i:nth-child(3){left:0;bottom:3px;transform:rotate(-45deg);transform-origin:left center}
+.game-hitmarker i:nth-child(4){right:0;bottom:3px;transform:rotate(45deg);transform-origin:right center}
+.game-hitmarker.head i{background:#ef2b2b}
+@keyframes hitFade{
+  0%{opacity:1;transform:translate(-50%,-50%) scale(.9)}
+  65%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1)}
 }
