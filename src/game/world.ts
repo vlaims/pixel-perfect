@@ -121,7 +121,8 @@ export function buildWorld(scene: THREE.Scene) {
   const red = new THREE.MeshBasicMaterial({ color: "#b52d2d" });
 
   // ----- City base -----
-  addMesh(scene, new THREE.PlaneGeometry(250, 250), base, 0, 0, 0);
+  const cityBase = addMesh(scene, new THREE.PlaneGeometry(250, 250), base, 0, 0, 0);
+  cityBase.rotation.x = -Math.PI / 2;
   const roadCenters = [-96, -48, 0, 48, 96];
   const roadWidth = 14;
 
@@ -129,10 +130,12 @@ export function buildWorld(scene: THREE.Scene) {
   const roadZGeo = new THREE.PlaneGeometry(250, roadWidth);
   for (const x of roadCenters) {
     const m = addMesh(scene, roadXGeo, asphalt, x, 0.01, 0);
+    m.rotation.x = -Math.PI / 2;
     m.frustumCulled = false;
   }
   for (const z of roadCenters) {
     const m = addMesh(scene, roadZGeo, asphalt, 0, 0.012, z);
+    m.rotation.x = -Math.PI / 2;
     m.frustumCulled = false;
   }
 
