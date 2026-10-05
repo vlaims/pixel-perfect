@@ -339,10 +339,10 @@ export class Engine {
       }
     }
     if (best) {
-      best.driver = a;
-      a.vehicle = best;
-      a.rolling = 0;
-      if (a.weapon === "ar") this.switchWeapon(a, "pistol");
+      if (best.beginEntry(a)) {
+        a.entering = 0.65;
+        a.rolling = 0;
+      }
     }
   }
 
@@ -386,7 +386,7 @@ export class Engine {
     a.ammo[a.weapon]--;
     a.cooldown = w.cooldown;
     a.flashT = 0.04;
-    this.playAt(w.sound, a, a.weapon === "ar" ? 0.7 : 0.8);
+    this.playAt("shoot", a, 0.7);
 
     let bestT = 220;
     let hitActor: Actor | null = null;
@@ -483,7 +483,10 @@ export class Engine {
       target.vehicle = null;
     }
     if (attacker && attacker !== target) attacker.kills++;
-    if (attacker?.isPlayer && target !== attacker) this.burstBlood(target.pos, head);
+    if (attacker?.isPlayer && target !== attacker) {
+      this.sfx.play("fire", 0.9);
+      this.burstBlood(target.pos, head);
+    }
     const feed = [{ id: ++this.feedId, killer: attacker?.name ?? "World", victim: target.name, head }, ...hudStore.get().feed].slice(0, 5);
     hudStore.set({ feed });
   }
@@ -518,7 +521,7 @@ export class Engine {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({color:0x8f1820,size:Math.max(0.025,Math.min(0.11,entry.spraySizeHi*entry.scale)),transparent:true,opacity:0.72,depthWrite:false});
+    const mat = new THREE.PointsMaterial({color:0x8f1820,size:Math.max(0.025,Math.min(0.11,entry.spraySizeHi*entry.scale)),transparent:true,opacity:0.8,depthWrite:false});
     const points = new THREE.Points(geo, mat);
     points.frustumCulled = false;
     (points as any).userData = {velocities,life:Math.max(0.2,Math.min(0.55,entry.lifeMax)),maxLife:Math.max(0.2,Math.min(0.55,entry.lifeMax)),gravity:entry.gravity};
@@ -854,6 +857,7 @@ export class Engine {
 
     // vehicles
     for (const v of this.vehicles) {
+      v.updateEntry(dt);
       const inp = v.driver ? v.driver.input : emptyInput();
       v.update(inp, dt, this.boxes, this.vehicles);
       if (v.driver) {
@@ -969,6 +973,8 @@ export class Engine {
       else a.vis.lerp(a.pos, lagK);
       a.root.position.copy(a.vis);
       a.root.rotation.y = a.vehicle ? a.vehicle.yaw : a.yaw;
+      // Cars fully occlude the seated character to prevent mesh/roof clipping.
+      a.rig.holder.visible = !(a.vehicle && a.vehicle.kind === "car");
       a.phase += dt * (a.moving > 0 ? 2 + a.moving * 1.45 : 0);
       const aimTarget = a.alive && (a.scoping || a.input.shoot || a.cooldown > -0.6) && a.radio < 0.5 ? 1 : 0;
       a.aimBlend += (aimTarget - a.aimBlend) * (1 - Math.exp(-80 * dt));
@@ -991,6 +997,7 @@ export class Engine {
       a.rig.pose({
         phase: a.phase,
         move: a.vehicle || !a.alive ? 0 : Math.min(1, a.moving / MOVE.RUN) * (a.rolling > 0 ? 0 : 1),
+         sprint: !a.vehicle && a.input.sprint && a.input.f && !a.input.b && a.moving > MOVE.RUN * 0.9,
         aim: a.rolling > 0 ? 0.2 : a.aimBlend,
         pitch: a.vehicle ? pitch * 0.5 : pitch,
         radio: a.radio,
