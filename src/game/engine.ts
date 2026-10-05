@@ -107,8 +107,8 @@ export class Actor {
 
 function makeGun(kind: WeaponId) {
   const g = new THREE.Group();
-  const m = new THREE.MeshStandardMaterial({ color: "#1d1e22", roughness: 0.5, metalness: 0.6 });
-  const m2 = new THREE.MeshStandardMaterial({ color: "#4a4436", roughness: 0.8 });
+  const m = new THREE.MeshLambertMaterial({ color: "#1d1e22" });
+  const m2 = new THREE.MeshLambertMaterial({ color: "#4a4436" });
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, mat = m) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     mesh.position.set(x, y, z);
