@@ -108,7 +108,7 @@ export function buildWorld(scene: THREE.Scene) {
   const yellow = new THREE.MeshBasicMaterial({ color: "#d2b04b" });
   const concrete = new THREE.MeshLambertMaterial({ color: "#6a6d70" });
   const darkConcrete = new THREE.MeshLambertMaterial({ color: "#3b3e42" });
-  const glass = new THREE.MeshLambertMaterial({ color: "#385563", roughness: 0.2, metalness: 0.2 });
+  const glass = new THREE.MeshLambertMaterial({ color: "#385563" });
   const glassLight = new THREE.MeshBasicMaterial({ color: "#9bbac7" });
   const roof = new THREE.MeshLambertMaterial({ color: "#3a3b3c" });
   const brick = new THREE.MeshLambertMaterial({ color: "#8b6150" });
