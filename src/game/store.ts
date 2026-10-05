@@ -19,6 +19,7 @@ export interface FeedItem {
   killer: string;
   victim: string;
   head: boolean;
+  zone: "head" | "body" | "legs";
 }
 
 export interface HudState {
@@ -38,7 +39,7 @@ export interface HudState {
   vehicle: string | null;
   prompt: string | null;
   scoping: boolean;
-  hit: { id: number; head: boolean } | null;
+  hit: { id: number; head: boolean; zone: "head" | "body" | "legs" } | null;
   feed: FeedItem[];
 }
 
