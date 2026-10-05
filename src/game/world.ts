@@ -97,6 +97,8 @@ function localToWorld(x: number, z: number, yaw: number, lx: number, lz: number)
 export function buildWorld(scene: THREE.Scene) {
   const rand = rng(1337);
   const boxes: Box[] = [];
+  const glassMeshes: THREE.Mesh[] = [];
+
 
   // ----- Palette -----
   const base = new THREE.MeshLambertMaterial({ color: "#686a68" });
@@ -264,6 +266,22 @@ export function buildWorld(scene: THREE.Scene) {
   const shutterGeo = new THREE.BoxGeometry(0.05, 0.42, 0.72);
   const colors = ["#676a6d","#756d63","#5d6367","#81786f","#625d59","#747a78","#6b625c","#50585c"];
 
+  const addGlass = (
+    geometry: THREE.BufferGeometry,
+    material: THREE.Material,
+    x: number,
+    y: number,
+    z: number,
+    sx = 1,
+    sy = 1,
+    sz = 1,
+    yaw = 0,
+  ) => {
+    const m = addMesh(scene, geometry, material, x, y, z, sx, sy, sz, yaw);
+    glassMeshes.push(m);
+    return m;
+  };
+
   function addBuilding(
     x:number,z:number,w:number,d:number,h:number,mat:THREE.Material,front:number
   ) {
@@ -280,7 +298,7 @@ export function buildWorld(scene: THREE.Scene) {
         const py=1.9+r*3.0;
         if(py<h-1.1) {
           const wm = ((r + col + Math.round(x * 0.1) + Math.round(z * 0.1)) % 5 === 0) ? windowWarm : glassLight;
-          addMesh(scene,windowGeo,wm,px,py,fz);
+          addGlass(windowGeo,wm,px,py,fz);
         }
       }
       if(h<9){
@@ -297,7 +315,7 @@ export function buildWorld(scene: THREE.Scene) {
         const py=1.9+r*3.0;
         if(py<h-1.1) {
           const wm = ((r + col + Math.round(x * 0.1) + Math.round(z * 0.1) + 1) % 5 === 0) ? windowWarm : glassLight;
-          addMesh(scene,windowGeo,wm,px,py,fz);
+          addGlass(windowGeo,wm,px,py,fz);
         }
       }
       if(h<9){
@@ -312,7 +330,7 @@ export function buildWorld(scene: THREE.Scene) {
       for(let r=0;r<rows;r++) for(let col=0;col<cols;col++){
         const pz=z-d/2+(col+0.55)*(d/cols);
         const py=1.9+r*3.0;
-        if(py<h-1.1) addMesh(scene,windowGeo,glassLight,fx,py,pz,1,1,1,Math.PI/2);
+        if(py<h-1.1) addGlass(windowGeo,glassLight,fx,py,pz,1,1,1,Math.PI/2);
       }
     } else {
       const fx=x+w/2+0.04;
@@ -321,7 +339,7 @@ export function buildWorld(scene: THREE.Scene) {
       for(let r=0;r<rows;r++) for(let col=0;col<cols;col++){
         const pz=z-d/2+(col+0.55)*(d/cols);
         const py=1.9+r*3.0;
-        if(py<h-1.1) addMesh(scene,windowGeo,glassLight,fx,py,pz,1,1,1,Math.PI/2);
+        if(py<h-1.1) addGlass(windowGeo,glassLight,fx,py,pz,1,1,1,Math.PI/2);
       }
     }
   }
@@ -531,7 +549,7 @@ export function buildWorld(scene: THREE.Scene) {
   ]) addBox(scene,dumpGeo,concrete,x,0.55,z,w,1.1,d,0,boxes,true);
 
   // Compatibility time uniform for the engine.
-  return { boxes, grassTime: { value: 0 } };
+  return { boxes, glassMeshes, grassTime: { value: 0 } };
 }
 
 export function rayBox(o: THREE.Vector3, d: THREE.Vector3, b: Box, maxT: number): number {
