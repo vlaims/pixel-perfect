@@ -33,3 +33,156 @@
 .game-hitmarker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:bold 30px/1 Arial;color:#fff;text-shadow:0 0 2px #000;pointer-events:none;animation:hitFade .1s linear forwards;z-index:9997;opacity:1!important;mix-blend-mode:normal}
 .game-hitmarker.head{color:#f00}
 @keyframes hitFade{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-50%) scale(1.12)}}
+
+
+/* Refined settings UI */
+.game-settings-layer{
+  background:rgba(3,5,8,.76);
+  backdrop-filter:blur(8px) saturate(.85);
+}
+.game-settings{
+  width:min(760px,calc(100vw - 28px));
+  min-width:0;
+  max-height:min(720px,calc(100vh - 28px));
+  padding:0;
+  overflow:hidden;
+  border:1px solid rgba(85,146,255,.55);
+  border-radius:14px;
+  background:linear-gradient(180deg,#0d1016 0%,#080a0e 100%);
+  box-shadow:0 32px 100px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.035) inset;
+  gap:0;
+}
+.settings-header{
+  min-height:78px;
+  padding:18px 20px;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.game-settings-title{font-size:15px;letter-spacing:.18em}
+.game-settings header small{display:block;margin-top:5px;color:#7f8998;font-size:9px;letter-spacing:.11em}
+.settings-head-actions{display:flex;align-items:center;gap:8px}
+.settings-reset,.settings-close{
+  border:1px solid #2b3340;
+  color:#b9c1ce;
+  background:#11151c;
+  border-radius:7px;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.settings-reset{padding:7px 10px;font:700 10px monospace;letter-spacing:.08em}
+.settings-close{width:34px;height:34px;font-size:21px}
+.settings-reset:hover,.settings-close:hover{border-color:#4b8dff;color:#fff;background:#151b25}
+.settings-body{display:grid;grid-template-columns:190px 1fr;min-height:430px}
+.game-settings-tabs{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:12px;
+  border-right:1px solid rgba(255,255,255,.07);
+  background:rgba(0,0,0,.15);
+}
+.game-settings-tabs button{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:3px;
+  padding:12px 12px;
+  text-align:left;
+  border:1px solid transparent;
+  border-radius:8px;
+  background:transparent;
+  color:#9099a7;
+}
+.game-settings-tabs button span{font-size:11px;font-weight:800;letter-spacing:.08em}
+.game-settings-tabs button small{font-size:9px;color:#626c7b}
+.game-settings-tabs button.active{
+  border-color:rgba(45,124,255,.48);
+  background:linear-gradient(90deg,rgba(45,124,255,.18),rgba(45,124,255,.04));
+  color:#fff;
+}
+.game-settings-tabs button.active small{color:#91b8ff}
+.settings-content{padding:22px 24px;overflow:auto}
+.settings-section-title{font-size:10px;font-weight:900;letter-spacing:.15em;color:#d7deea;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07)}
+.settings-panel{gap:18px}
+.settings-panel label{font-size:11px;color:#aab4c2}
+.settings-panel select,.settings-panel input[type=number]{
+  min-height:38px;
+  border-radius:7px;
+  padding:9px 10px;
+  background:#0e1218;
+  border:1px solid #29313d;
+}
+.settings-panel select:focus,.settings-panel input[type=number]:focus{
+  outline:none;border-color:#4b8dff;box-shadow:0 0 0 3px rgba(75,141,255,.12)
+}
+.settings-panel input[type=range]{height:4px}
+.settings-panel input[type=range]::-webkit-slider-thumb{cursor:pointer}
+.settings-grid{gap:14px}
+.settings-readout{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:5px;
+  min-height:54px;
+  padding:0 12px;
+  border:1px solid #29313d;
+  border-radius:7px;
+  background:#0e1218;
+}
+.settings-readout span{font-size:8px;letter-spacing:.12em;color:#697384}
+.settings-readout strong{font:700 12px monospace;color:#eef3fb}
+.settings-wide{
+  min-height:40px;
+  border-radius:7px;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.settings-preview{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  min-height:86px;
+  border:1px solid #29313d;
+  border-radius:9px;
+  background:radial-gradient(circle at center,#161b22 0%,#0a0d12 70%);
+}
+.settings-preview small{font:9px monospace;letter-spacing:.12em;color:#687383}
+.preview-crosshair{position:relative;width:26px;height:26px;display:grid;place-items:center;box-sizing:border-box}
+.preview-crosshair i{display:block;width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 0 1px currentColor}
+.preview-crosshair.cross i,.preview-crosshair.cross:after,.preview-crosshair.cross:before{content:"";position:absolute}
+.preview-crosshair.cross i{width:2px;height:24px;border-radius:1px}
+.preview-crosshair.cross:after{width:24px;height:2px;background:currentColor}
+.preview-crosshair.inverted{background:#fff;border-radius:50%}
+.preview-crosshair.inverted i{background:#111;border-color:#111}
+.settings-help{
+  padding:11px 12px;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:7px;
+  background:rgba(255,255,255,.025);
+  color:#677181;
+  font:9px/1.5 monospace;
+}
+.settings-check{
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  align-items:center!important;
+  min-height:40px;
+  padding:0 11px;
+  border:1px solid #29313d;
+  border-radius:7px;
+  background:#0e1218;
+}
+.settings-check input{accent-color:#2d7cff}
+@media(max-width:700px){
+  .settings-body{grid-template-columns:1fr;min-height:0}
+  .game-settings-tabs{display:grid;grid-template-columns:repeat(3,1fr);border-right:0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .settings-content{max-height:58vh}
+  .game-settings-tabs button{padding:10px}
+  .game-settings-tabs button small{display:none}
+}
+@media(max-width:520px){
+  .settings-grid{grid-template-columns:1fr}
+  .settings-content{padding:18px}
+}
