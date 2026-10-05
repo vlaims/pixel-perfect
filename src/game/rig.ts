@@ -25,6 +25,7 @@ export interface PoseInput {
   pistol: boolean;
   dead: boolean;
   sprint: boolean;
+  roll: number;
 }
 
 const tq = new THREE.Quaternion();
@@ -98,6 +99,27 @@ export class Rig {
     const c = Math.cos(p.phase);
     const mv = p.move;
     const sprint = p.sprint && mv > 0.01;
+    const roll = Math.max(0, Math.min(1, p.roll));
+
+    // Compact the character before the tumble so the body visibly rolls
+    // through space instead of rotating in a standing idle pose.
+    if (roll > 0.001) {
+      const tuck = Math.sin(Math.PI * Math.min(1, roll) * 0.9);
+      this.rot("LeftUpLeg", -1.05 - 0.65 * tuck, 0, -0.14 * tuck);
+      this.rot("RightUpLeg", -1.05 - 0.65 * tuck, 0, 0.14 * tuck);
+      this.rot("LeftLeg", 1.55 + 0.35 * tuck, 0, 0);
+      this.rot("RightLeg", 1.55 + 0.35 * tuck, 0, 0);
+      this.rot("Spine", 0.18, 0, 0);
+      this.rot("Spine1", -0.08, 0, 0);
+      this.rot("Spine2", -0.06, 0, 0);
+      this.rot("Head", -0.12, 0, 0);
+      this.rot("LeftArm", -0.65 - 0.25 * tuck, -0.4, -0.55, "YXZ");
+      this.rot("RightArm", -0.65 - 0.25 * tuck, 0.4, 0.55, "YXZ");
+      this.rot("LeftForeArm", 0.8, -0.2, 0);
+      this.rot("RightForeArm", 0.8, 0.2, 0);
+      return;
+    }
+
     if (p.seated > 0.5) {
       this.rot("LeftUpLeg", -1.35, 0, -0.15);
       this.rot("RightUpLeg", -1.35, 0, 0.15);
