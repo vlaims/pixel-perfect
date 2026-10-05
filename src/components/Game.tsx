@@ -16,6 +16,14 @@ export function Game() {
   const settings = useSettings();
   const [tab, setTab] = useState<"resolution" | "crosshair" | "sensitivity">("resolution");
   const [error, setError] = useState<string | null>(null);
+  const [viewport, setViewport] = useState(() => ({ w: 1, h: 1 }));
+
+  useEffect(() => {
+    const updateViewport = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
 
   useEffect(() => {
     const hitId = hud.hit?.id;
@@ -172,11 +180,14 @@ export function Game() {
   const customW = Math.max(320, Math.min(7680, Math.round(settings.customWidth)));
   const customH = Math.max(240, Math.min(4320, Math.round(settings.customHeight)));
 
+  const uiStretchX = settings.aspect === "4:3" && viewport.h > 0
+    ? (viewport.w / viewport.h) / (4 / 3)
+    : 1;
+
   return (
     <main className="game-shell">
       <canvas ref={canvasRef} className="game-canvas" />
-      <div className="game-vignette" />
-
+      <div className="game-ui" style={{ transform: `scaleX(${uiStretchX})` }}>
       <div className="game-topbar">
         <span className="game-title">PIXEL PERFECT</span>
         <span className="game-hint">CLICK TO PLAY · WASD MOVE · SHIFT RUN · LMB FIRE · RMB AIM · R RELOAD · E VEHICLE</span>
@@ -293,6 +304,7 @@ export function Game() {
       {hud.dead && <div className="game-dead"><strong>YOU DIED</strong><span>RESPAWNING IN {hud.respawnIn}</span></div>}
       {hud.loading && !error && <div className="game-overlay"><div className="game-loader">LOADING GAME</div></div>}
       {error && <div className="game-overlay"><div className="game-error"><strong>GAME FAILED TO LOAD</strong><span>{error}</span><button onClick={() => window.location.reload()}>RELOAD</button></div></div>}
+      </div>
     </main>
   );
 }
