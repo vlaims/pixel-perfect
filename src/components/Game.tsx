@@ -52,9 +52,9 @@ export function Game() {
           : null,
         reshade: Boolean(parsed.reshade),
         volume: Number.isFinite(parsed.volume) ? Math.max(0, Math.min(1, parsed.volume)) : current.volume,
-        aspect: parsed.aspect === "4:3" ? "4:3" : "16:9",
-        customWidth: Number.isFinite(parsed.customWidth) ? Math.max(320, Math.min(7680, Math.round(parsed.customWidth))) : current.customWidth,
-        customHeight: Number.isFinite(parsed.customHeight) ? Math.max(240, Math.min(4320, Math.round(parsed.customHeight))) : current.customHeight,
+        aspect: typeof parsed.aspect === "string" && /^\d+(?:\.\d+)?:\d+(?:\.\d+)?$/.test(parsed.aspect) ? parsed.aspect : "16:9",
+        customWidth: Number.isFinite(parsed.customWidth) ? Math.max(1, Math.round(parsed.customWidth)) : current.customWidth,
+        customHeight: Number.isFinite(parsed.customHeight) ? Math.max(1, Math.round(parsed.customHeight)) : current.customHeight,
         centerColor: typeof parsed.centerColor === "string" ? parsed.centerColor : current.centerColor,
         borderColor: typeof parsed.borderColor === "string" ? parsed.borderColor : current.borderColor,
       });
@@ -179,12 +179,12 @@ export function Game() {
     centerColor: "#ffffff",
     borderColor: "#000000",
   });
-  const customW = Math.max(320, Math.min(7680, Math.round(settings.customWidth)));
-  const customH = Math.max(240, Math.min(4320, Math.round(settings.customHeight)));
+  const customW = Math.max(1, Math.round(settings.customWidth));
+  const customH = Math.max(1, Math.round(settings.customHeight));
 
-  const uiStretchX = settings.aspect === "4:3" && viewport.h > 0
-    ? (viewport.w / viewport.h) / (4 / 3)
-    : 1;
+  const aspectParts = settings.aspect.match(/^(\\d+(?:\\.\\d+)?):(\\d+(?:\\.\\d+)?)$/);
+  const targetAspect = aspectParts ? Number(aspectParts[1]) / Number(aspectParts[2]) : 16 / 9;
+  const uiStretchX = viewport.h > 0 && targetAspect > 0 ? (viewport.w / viewport.h) / targetAspect : 1;
 
   return (
     <main className="game-shell">
@@ -255,7 +255,7 @@ export function Game() {
                       } else {
                         const [w,h]=v.split("x").map(Number);
                         setSetting("resolution",{w,h});
-                        setSetting("aspect", w / h < 1.5 ? "4:3" : "16:9");
+                        setSetting("aspect", `${w}:${h}`);
                       }
                     }}>
                       <option value="native">Native display</option>
@@ -266,17 +266,23 @@ export function Game() {
 
                   <div className="settings-grid">
                     <label>Aspect ratio
-                      <select value={settings.aspect} onChange={e => setSetting("aspect", e.target.value as "16:9"|"4:3")}>
+                      <select value={["16:9","4:3","21:9","1:1"].includes(settings.aspect) ? settings.aspect : "custom"} onChange={e => {
+                        const v=e.target.value;
+                        if(v !== "custom") setSetting("aspect", v);
+                      }}>
                         <option value="16:9">16:9 widescreen</option>
                         <option value="4:3">4:3 stretched</option>
+                        <option value="21:9">21:9 ultrawide</option>
+                        <option value="1:1">1:1 square</option>
+                        <option value="custom">Custom ratio</option>
                       </select>
                     </label>
-                    <div className="settings-readout"><span>RENDER SIZE</span><strong>{settings.resolution ? `${settings.resolution.w}×${settings.resolution.h}` : "NATIVE"}</strong></div>
+                    <div className="settings-readout"><span>RENDER SIZE</span><strong>{settings.resolution ? `${settings.resolution.w}×${settings.resolution.h}` : "NATIVE"}</strong></div>\n                  <div className="settings-grid">\n                    <label>Custom aspect width<input type="number" min="1" step="any" value={aspectParts ? aspectParts[1] : "16"} onChange={e=>{const n=Number(e.target.value); if(Number.isFinite(n)&&n>0) setSetting("aspect",`${n}:${aspectParts ? aspectParts[2] : "9"}`)}}/></label>\n                    <label>Custom aspect height<input type="number" min="1" step="any" value={aspectParts ? aspectParts[2] : "9"} onChange={e=>{const n=Number(e.target.value); if(Number.isFinite(n)&&n>0) setSetting("aspect",`${aspectParts ? aspectParts[1] : "16"}:${n}`)}}/></label>\n                  </div>
                   </div>
 
                   <div className="settings-grid">
-                    <label>Custom width<input type="number" min="320" max="7680" value={customW} onChange={e=>setSetting("customWidth",Number(e.target.value)||320)}/></label>
-                    <label>Custom height<input type="number" min="240" max="4320" value={customH} onChange={e=>setSetting("customHeight",Number(e.target.value)||240)}/></label>
+                    <label>Custom width<input type="number" min="1" step="1" value={customW} onChange={e=>setSetting("customWidth",Number(e.target.value)||1)}/></label>
+                    <label>Custom height<input type="number" min="1" step="1" value={customH} onChange={e=>setSetting("customHeight",Number(e.target.value)||1)}/></label>
                   </div>
                   <button className="settings-wide" onClick={()=>setSetting("resolution",{w:customW,h:customH})}>APPLY CUSTOM RESOLUTION</button>
                 </div>}
