@@ -291,7 +291,7 @@ export class Engine {
       const a = new Actor(i, i === 0 ? "You" : BOT_NAMES[i - 1], i === 0, rig, this.flashMat);
       this.scene.add(a.root, a.guns.ar, a.guns.pistol, a.flash);
       if (i > 0) {
-        a.brain = { target: null, thinkT: Math.random(), strafeT: 0, strafeKey: "l", wander: new THREE.Vector3(), react: 0.4, hurtT: 0, driveT: 0, goVehicle: null, aimErr: 0.3 };
+        a.brain = { target: null, thinkT: Math.random(), strafeT: 0, strafeKey: "l", wander: new THREE.Vector3(), react: 0.4, hurtT: 0, driveT: 0, goVehicle: null, aimErr: 0.52 };
         this.pickWander(a);
       }
       this.spawn(a, i === 0 ? new THREE.Vector3(0, 0, -6) : undefined);
@@ -777,7 +777,7 @@ export class Engine {
     br.thinkT -= dt;
     br.hurtT -= dt;
     if (br.thinkT <= 0) {
-      br.thinkT = 0.4 + Math.random() * 0.3;
+      br.thinkT = 0.28 + Math.random() * 0.22;
       let best: Actor | null = null;
       let bd = 75;
       for (const o of this.actors) {
@@ -790,10 +790,10 @@ export class Engine {
       }
       if (best !== br.target) {
         br.react = 0.35 + Math.random() * 0.4;
-        br.aimErr = 0.25;
+        br.aimErr = 0.55 + Math.random() * 0.18;
       }
       br.target = best;
-      if (!best && !a.vehicle && !br.goVehicle && Math.random() < 0.30) {
+      if (!best && !a.vehicle && !br.goVehicle && Math.random() < 0.55) {
         const free = this.vehicles.filter((v) => !v.driver && !v.entering);
         if (free.length) {
           free.sort((x, y) => x.pos.distanceTo(a.pos) - y.pos.distanceTo(a.pos));
@@ -803,7 +803,7 @@ export class Engine {
     }
     const t = br.target && br.target.alive ? br.target : null;
     br.react -= dt;
-    br.aimErr = Math.max(0.02, br.aimErr - dt * 0.25);
+    br.aimErr = Math.max(0.22, br.aimErr - dt * 0.045);
 
     // desired aim
     let goal: THREE.Vector3;
@@ -819,8 +819,10 @@ export class Engine {
     const dist = Math.hypot(gx, gz);
     const wantYaw = Math.atan2(gx, gz);
     const wantPitch = Math.atan2(goal.y - eye.y, dist);
-    a.aimYaw = lerpAngle(a.aimYaw, wantYaw, 1 - Math.exp(-7 * dt));
-    a.aimPitch += (wantPitch - a.aimPitch) * (1 - Math.exp(-7 * dt));
+    const wobble = Math.sin(this.time * (1.8 + a.id * 0.17)) * 0.055 + Math.sin(this.time * (3.1 + a.id * 0.11)) * 0.025;
+    const pitchWobble = Math.cos(this.time * (1.5 + a.id * 0.13)) * 0.035;
+    a.aimYaw = lerpAngle(a.aimYaw, wantYaw + wobble, 1 - Math.exp(-3.8 * dt));
+    a.aimPitch += ((wantPitch + pitchWobble) - a.aimPitch) * (1 - Math.exp(-3.6 * dt));
 
     if (a.vehicle) {
       const v = a.vehicle;
@@ -834,6 +836,7 @@ export class Engine {
       if (br.driveT <= 0 || (t && dist < 10 && Math.abs(v.speed) < 1)) {
         this.toggleVehicle(a);
         br.goVehicle = null;
+        br.thinkT = 0.05;
       }
       a.input = inp;
       if (t && br.react <= 0 && dist < 45) {
@@ -876,7 +879,7 @@ export class Engine {
 
     if (inp.shoot && t && !(a.weapon === "pistol" && !inp.shootPressed)) {
       const dir = new THREE.Vector3(Math.sin(a.aimYaw) * Math.cos(a.aimPitch), Math.sin(a.aimPitch), Math.cos(a.aimYaw) * Math.cos(a.aimPitch));
-      const spread = br.aimErr * 0.25 + 0.022 + (t.rolling > 0 ? 0.04 : 0) + (a.vehicle ? 0.03 : 0) + (a.moving > 0 ? 0.008 : 0);
+      const spread = br.aimErr * 0.62 + 0.045 + (t.rolling > 0 ? 0.05 : 0) + (a.vehicle ? 0.08 : 0) + (a.moving > 0 ? 0.025 : 0);
       dir.x += (Math.random() - 0.5) * spread * 2;
       dir.y += (Math.random() - 0.5) * spread * 1.4 - 0.004;
       dir.z += (Math.random() - 0.5) * spread * 2;
