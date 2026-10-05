@@ -5,6 +5,9 @@ export interface BloodFxEntry {
   spraySizeLo: number;
   mistSizeHi: number;
   mistSizeLo: number;
+  velocity: number;
+  gravity: number;
+  scale: number;
   lifeMin: number;
   lifeMax: number;
   growthMin: number;
@@ -40,6 +43,9 @@ export function parseBloodFxDat(text: string): BloodFxConfig {
       mistSizeHi: nums[21], mistSizeLo: nums[22],
       lifeMin: nums[23], lifeMax: nums[24],
       growthMin: nums[25], growthMax: nums[26],
+      velocity: Math.max(1, (nums[25] + nums[26]) / Math.max(0.05, nums[23] + nums[24])),
+      gravity: 14 + Math.max(0, nums[15]) * 0.5,
+      scale: Math.max(0.25, (nums[19] + nums[20] + nums[21] + nums[22]) * 4),
       fxSystems, damageName: fxSystems.at(-1) ?? "blood",
     });
   }
@@ -58,7 +64,7 @@ export function selectBloodFx(config: BloodFxConfig, headshot: boolean): BloodFx
   return config.byId.get(headshot ? 81 : 80) ?? config.entries[0] ?? {
     id: headshot ? 81 : 80, probability: 1,
     spraySizeHi: 0.18, spraySizeLo: 0.08, mistSizeHi: 0.12, mistSizeLo: 0.05,
-    lifeMin: 0.18, lifeMax: 0.4, growthMin: 0.05, growthMax: 0.1,
+    lifeMin: 0.18, lifeMax: 0.4, growthMin: 0.05, growthMax: 0.1, velocity: 7, gravity: 18, scale: 1,
     fxSystems: [], damageName: "fallback",
   };
 }
