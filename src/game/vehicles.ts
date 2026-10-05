@@ -51,9 +51,9 @@ export class Vehicle {
     };
 
     const wheelGeo = new THREE.CylinderGeometry(
-      kind === "car" ? 0.39 : 0.35,
-      kind === "car" ? 0.39 : 0.35,
-      kind === "car" ? 0.30 : 0.13,
+      kind === "car" ? 0.43 : 0.35,
+      kind === "car" ? 0.43 : 0.35,
+      kind === "car" ? 0.34 : 0.13,
       12,
     );
     wheelGeo.rotateZ(Math.PI / 2);
@@ -61,11 +61,16 @@ export class Vehicle {
     hubGeo.rotateZ(Math.PI / 2);
 
     if (kind === "car") {
-      add(new THREE.BoxGeometry(1.92, 0.52, 4.12), paint, 0, 0.56, 0);
-      add(new THREE.BoxGeometry(1.78, 0.16, 1.05), paint, 0, 0.84, 1.48);
-      add(new THREE.BoxGeometry(1.72, 0.14, 0.72), paintDark, 0, 0.80, -1.60);
-      add(new THREE.BoxGeometry(1.66, 0.50, 1.94), glass, 0, 1.06, -0.23);
-      add(new THREE.BoxGeometry(1.72, 0.09, 1.88), paint, 0, 1.34, -0.23);
+      // Trackhawk-inspired SUV silhouette: wide body, squared greenhouse, hood and high stance.
+      add(new THREE.BoxGeometry(2.18, 0.62, 4.42), paint, 0, 0.62, 0);
+      add(new THREE.BoxGeometry(2.02, 0.18, 1.16), paint, 0, 0.94, 1.52);
+      add(new THREE.BoxGeometry(1.92, 0.18, 0.82), paintDark, 0, 0.91, -1.72);
+      add(new THREE.BoxGeometry(1.78, 0.56, 1.98), glass, 0, 1.22, -0.18);
+      add(new THREE.BoxGeometry(1.88, 0.10, 1.94), paint, 0, 1.53, -0.18);
+      // Front grille, bumper and lower splitter.
+      add(new THREE.BoxGeometry(1.18, 0.24, 0.08), paintDark, 0, 0.54, 2.22);
+      add(new THREE.BoxGeometry(1.62, 0.12, 0.10), trim, 0, 0.43, 2.24);
+      add(new THREE.BoxGeometry(1.74, 0.10, 0.16), paintDark, 0, 0.35, 2.18);
 
       add(new THREE.BoxGeometry(1.46, 0.32, 0.06), glass, 0, 1.08, 0.72).rotation.x = -0.18;
       add(new THREE.BoxGeometry(1.46, 0.29, 0.06), glass, 0, 1.08, -1.17).rotation.x = 0.18;
@@ -94,7 +99,7 @@ export class Vehicle {
       this.door.rotation.set(0, 0, 0);
       this.body.add(this.door);
 
-      for (const [wx, wz] of [[0.92, 1.35], [-0.92, 1.35], [0.92, -1.35], [-0.92, -1.35]]) {
+      for (const [wx, wz] of [[1.00, 1.42], [-1.00, 1.42], [1.00, -1.42], [-1.00, -1.42]]) {
         this.wheels.push(add(wheelGeo, tire, wx, 0.38, wz, this.group));
         add(hubGeo, trim, wx, 0.38, wz, this.group);
       }
