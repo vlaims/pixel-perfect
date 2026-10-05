@@ -298,6 +298,19 @@ export class Engine {
       this.actors.push(a);
     }
     this.player = this.actors[0];
+    // Put several bots into the vehicle fleet at startup so moving aim targets are always available.
+    const driverSlots = this.vehicles.slice(0, 6);
+    for (let i = 0; i < driverSlots.length && i + 1 < this.actors.length; i++) {
+      const bot = this.actors[i + 1];
+      const vehicle = driverSlots[i];
+      bot.pos.copy(vehicle.pos);
+      bot.vis.copy(bot.pos);
+      bot.yaw = vehicle.yaw;
+      bot.aimYaw = vehicle.yaw;
+      bot.brain!.goVehicle = vehicle;
+      vehicle.beginEntry(bot);
+      bot.entering = 0.65;
+    }
     this.camYaw = 0;
     hudStore.set({ loading: false });
   }
@@ -779,9 +792,12 @@ export class Engine {
         br.aimErr = 0.25;
       }
       br.target = best;
-      if (!best && !a.vehicle && !br.goVehicle && Math.random() < 0.08) {
-        const free = this.vehicles.filter((v) => !v.driver && v.pos.distanceTo(a.pos) < 30);
-        if (free.length) br.goVehicle = free[0];
+      if (!best && !a.vehicle && !br.goVehicle && Math.random() < 0.30) {
+        const free = this.vehicles.filter((v) => !v.driver && !v.entering);
+        if (free.length) {
+          free.sort((x, y) => x.pos.distanceTo(a.pos) - y.pos.distanceTo(a.pos));
+          br.goVehicle = free[0];
+        }
       }
     }
     const t = br.target && br.target.alive ? br.target : null;
@@ -814,7 +830,7 @@ export class Engine {
       inp.l = dyaw > 0.12 ? 1 : 0;
       inp.r = dyaw < -0.12 ? 1 : 0;
       if (!t && dist < 8) this.pickWander(a);
-      if (br.driveT <= 0 || (t && dist < 10 && Math.abs(v.speed) < 3)) {
+      if (br.driveT <= 0 || (t && dist < 10 && Math.abs(v.speed) < 1)) {
         this.toggleVehicle(a);
         br.goVehicle = null;
       }
@@ -845,7 +861,7 @@ export class Engine {
         if (br.goVehicle.driver) br.goVehicle = null;
         else if (dist < 3) {
           this.toggleVehicle(a);
-          br.driveT = 10 + Math.random() * 12;
+          br.driveT = 18 + Math.random() * 18;
           this.pickWander(a);
         }
       } else {
