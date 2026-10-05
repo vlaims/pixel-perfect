@@ -231,3 +231,7 @@
   transform:translate(-50%,-50%);
   object-fit:cover;
 }
+
+/* Final crosshair + held crouch presentation */
+.game-crosshair.dot{width:var(--crosshair-dot-size)!important;height:var(--crosshair-dot-size)!important;border:0!important;border-radius:50%!important;}
+.game-crosshair.dot span{width:100%!important;height:100%!important;background:#fff!important;border-radius:50%!important;box-shadow:0 0 0 2px #000!important;}
