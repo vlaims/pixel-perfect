@@ -1,8 +1,8 @@
 
 /* Pixel Perfect game surface */
-.game-shell{position:fixed;inset:0;overflow:hidden;background:#050608;color:#fff;font-family:Arial,Helvetica,sans-serif;user-select:none}
+.game-shell{position:fixed;inset:0;overflow:hidden;background:#050608;color:#fff;font-family:Arial,Helvetica,sans-serif;user-select:none}\n.game-ui{position:absolute;inset:0;transform-origin:center center;pointer-events:none}
 .game-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;outline:none}
-.game-vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 45%,rgba(0,0,0,.38) 100%)}
+.game-vignette{display:none}
 .game-topbar{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px;background:linear-gradient(180deg,rgba(0,0,0,.55),transparent);pointer-events:none;text-shadow:0 2px 5px #000}
 .game-title{font-size:15px;font-weight:900;letter-spacing:.22em}.game-hint{font-size:10px;letter-spacing:.1em;opacity:.72}
 .game-crosshair{position:absolute;left:50%;top:50%;width:12px;height:12px;transform:translate(-50%,-50%);pointer-events:none}
@@ -22,7 +22,7 @@
 
 .game-crosshair{z-index:9996;display:grid;place-items:center;box-sizing:border-box}.game-crosshair.cross{width:18px!important;height:18px!important;border:0!important}.game-crosshair.cross span{width:2px;height:18px;position:relative}.game-crosshair.cross span:after{content:"";position:absolute;left:-8px;top:8px;width:18px;height:2px;background:currentColor}.game-crosshair.inverted{border-radius:50%;background:#fff}.game-crosshair.inverted span{width:5px;height:5px;background:#000!important;border-radius:50%}.game-settings{position:absolute;z-index:9999;top:50%;left:50%;transform:translate(-50%,-50%);min-width:280px;padding:22px;background:rgba(8,9,12,.96);border:1px solid rgba(255,255,255,.2);box-shadow:0 18px 60px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:14px;font-size:12px}.game-settings-title{font-weight:900;letter-spacing:.18em}.game-settings label{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.game-settings input[type=range]{grid-column:1/-1;width:100%}.game-settings select{background:#16181d;color:#fff;border:1px solid #444;padding:4px}.game-settings input[type=checkbox]{justify-self:end}
 
-.game-settings-button{position:absolute;top:12px;right:14px;z-index:10000;width:38px;height:38px;border:1px solid #2d7cff;background:#05070b;color:#fff;font-size:20px;cursor:pointer;box-shadow:0 0 18px rgba(45,124,255,.25)}
+.game-settings-button{position:absolute;top:12px;right:14px;z-index:10000;width:38px;height:38px;border:1px solid #2d7cff;background:#05070b;color:#fff;font-size:20px;cursor:pointer;pointer-events:auto}
 .game-settings-layer{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:rgba(0,0,0,.62);pointer-events:auto}
 .game-settings{position:relative;z-index:10000;min-width:460px;max-width:min(680px,calc(100vw - 32px));padding:22px;background:#08090c;border:1px solid #2d7cff;box-shadow:0 24px 80px rgba(0,0,0,.7);display:flex;flex-direction:column;gap:16px;font-size:12px}
 .game-settings header{display:flex;justify-content:space-between;align-items:center}.game-settings header button{background:none;border:0;color:#fff;font-size:24px;cursor:pointer}.game-settings-title{font-weight:900;letter-spacing:.18em}.game-settings header small{font:9px monospace;opacity:.5}
@@ -45,14 +45,14 @@
   overflow:hidden;
   border:1px solid rgba(85,146,255,.55);
   border-radius:14px;
-  background:linear-gradient(180deg,#0d1016 0%,#080a0e 100%);
-  box-shadow:0 32px 100px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.035) inset;
+  background:#080a0e;
+  box-shadow:0 18px 48px rgba(0,0,0,.6);
   gap:0;
 }
 .settings-header{
   min-height:78px;
   padding:18px 20px;
-  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));
+  background:#0d1016;
   border-bottom:1px solid rgba(255,255,255,.07);
 }
 .game-settings-title{font-size:15px;letter-spacing:.18em}
@@ -143,7 +143,7 @@
   min-height:86px;
   border:1px solid #29313d;
   border-radius:9px;
-  background:radial-gradient(circle at center,#161b22 0%,#0a0d12 70%);
+  background:#10141a;
 }
 .settings-preview small{font:9px monospace;letter-spacing:.12em;color:#687383}
 .preview-crosshair{position:relative;width:26px;height:26px;display:grid;place-items:center;box-sizing:border-box}
