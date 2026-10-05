@@ -166,6 +166,7 @@ export class Engine {
   grassTime: { value: number } = { value: 0 };
   tracers: Tracer[] = [];
   bloodFx!: BloodFxConfig;
+  bloodPoints: THREE.Points[] = [];
   fpsEl: HTMLElement | null = null;
   fpsFrames = 0;
   fpsT = 0;
@@ -522,6 +523,7 @@ export class Engine {
     points.frustumCulled = false;
     (points as any).userData = {velocities,life:Math.max(0.2,Math.min(0.55,entry.lifeMax)),maxLife:Math.max(0.2,Math.min(0.55,entry.lifeMax)),gravity:entry.gravity};
     this.scene.add(points);
+    this.bloodPoints.push(points);
   }
 
   // ---------- simulation ----------
@@ -1031,25 +1033,24 @@ export class Engine {
         if (t.t <= 0) t.line.visible = false;
       }
     }
-    const remove: THREE.Object3D[] = [];
-    this.scene.traverse((o) => {
+    for (let i = this.bloodPoints.length - 1; i >= 0; i--) {
+      const o = this.bloodPoints[i];
       const d = (o as any).userData;
-      if (!d?.velocities) return;
       d.life -= dt;
       const p = o.geometry.attributes.position as THREE.BufferAttribute;
-      for (let i = 0; i < d.velocities.length; i++) {
-        const v = d.velocities[i] as THREE.Vector3;
+      for (let j = 0; j < d.velocities.length; j++) {
+        const v = d.velocities[j] as THREE.Vector3;
         v.y -= d.gravity * dt;
-        p.setXYZ(i, p.getX(i) + v.x * dt, p.getY(i) + v.y * dt, p.getZ(i) + v.z * dt);
+        p.setXYZ(j, p.getX(j) + v.x * dt, p.getY(j) + v.y * dt, p.getZ(j) + v.z * dt);
       }
       p.needsUpdate = true;
       (o.material as THREE.PointsMaterial).opacity = Math.max(0, d.life / d.maxLife) * 0.72;
-      if (d.life <= 0) remove.push(o);
-    });
-    for (const o of remove) {
-      this.scene.remove(o);
-      o.geometry.dispose();
-      (o.material as THREE.Material).dispose();
+      if (d.life <= 0) {
+        this.scene.remove(o);
+        o.geometry.dispose();
+        (o.material as THREE.Material).dispose();
+        this.bloodPoints.splice(i, 1);
+      }
     }
   }
 
