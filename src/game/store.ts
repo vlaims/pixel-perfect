@@ -73,7 +73,7 @@ export const settingsStore = createStore<Settings>({
   color: "#ffffff",
   sensitivity: 1,
   resolution: null,
-  reshade: true,
+  reshade: false,
   volume: 0.5,
 });
 
