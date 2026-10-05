@@ -1102,7 +1102,7 @@ export class Engine {
       back = scoping ? p.vehicle.cfg.camBack * 0.7 : p.vehicle.cfg.camBack;
       side = scoping ? 0.6 * this.shoulder : 0;
     } else {
-      pivot = tv.set(p.vis.x, p.vis.y + (p.rolling > 0 ? 1.2 : 1.6), p.vis.z);
+      pivot = tv.set(p.vis.x, p.vis.y + (p.rolling > 0 ? 1.2 : p.crouching ? 1.0 : 1.6), p.vis.z);
       back = scoping ? 1.5 : 3.0;
       side = (scoping ? 0.55 : 0.5) * this.shoulder;
     }
@@ -1139,6 +1139,11 @@ export class Engine {
         const k = Math.min(1, a.deadT / 0.35);
         a.pivot.rotation.set(-Math.PI / 2 * k, 0, 0);
         a.pivot.position.y = 0.95 - 0.75 * k;
+      } else if (a.crouching) {
+        // Held C keeps the player in a lowered stance; releasing C restores standing height.
+        a.pivot.rotation.set(0, 0, 0);
+        a.pivot.position.y = 0.62;
+        a.rollAngle = 0;
       } else if (a.rolling > 0) {
         const t = 1 - a.rolling / MOVE.ROLL_TIME;
         const rollEase = t * t * (3 - 2 * t);
