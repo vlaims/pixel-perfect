@@ -152,6 +152,8 @@ export class Engine {
   actors: Actor[] = [];
   vehicles: Vehicle[] = [];
   boxes: Box[] = [];
+  glassMeshes: THREE.Mesh[] = [];
+  glassShards: THREE.Mesh[] = [];
   player!: Actor;
   camYaw = 0;
   camPitch = 0;
@@ -186,49 +188,21 @@ export class Engine {
     this.renderer.shadowMap.enabled = false;
     this.renderer.shadowMap.autoUpdate = false;
 
-    const sky = new THREE.Color("#081020");
+    // Return to the bright daytime presentation: clear blue sky, warm sun, no moon or stars.
+    const sky = new THREE.Color("#8fc8ee");
     this.scene.background = sky;
-    this.scene.fog = new THREE.Fog("#101827", 72, 210);
-    this.scene.add(new THREE.HemisphereLight("#66728a", "#151a22", 0.48));
-    this.sun = new THREE.DirectionalLight("#a9b8dc", 0.88);
+    this.scene.fog = new THREE.Fog("#a9d3eb", 95, 235);
+    this.scene.add(new THREE.HemisphereLight("#d9efff", "#6f755f", 0.72));
+    this.sun = new THREE.DirectionalLight("#fff1cf", 1.35);
+    this.sun.position.set(-70, 120, 55);
+    this.sun.target.position.set(0, 0, 0);
     this.sun.castShadow = false;
-    const sc = this.sun.shadow.camera;
-    sc.left = sc.bottom = -45;
-    sc.right = sc.top = 45;
-    sc.near = 1;
-    sc.far = 160;
-    this.sun.shadow.bias = -0.0005;
     this.scene.add(this.sun, this.sun.target);
-
-    // Lightweight moon and stars. No bloom, glow, or post-processing.
-    const moon = new THREE.Mesh(
-      new THREE.SphereGeometry(6.5, 12, 8),
-      new THREE.MeshBasicMaterial({ color: "#d6dcef" })
-    );
-    moon.position.set(-88, 104, -118);
-    this.scene.add(moon);
-
-    const starCount = 160;
-    const starPositions = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const radius = 80 + Math.random() * 90;
-      starPositions[i * 3] = Math.cos(a) * radius;
-      starPositions[i * 3 + 1] = 58 + Math.random() * 80;
-      starPositions[i * 3 + 2] = Math.sin(a) * radius;
-    }
-    const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    const stars = new THREE.Points(
-      starGeo,
-      new THREE.PointsMaterial({ color: "#c8d0e0", size: 0.65, sizeAttenuation: false, depthWrite: false })
-    );
-    stars.frustumCulled = false;
-    this.scene.add(stars);
 
 
     const w = buildWorld(this.scene);
     this.boxes = w.boxes;
+    this.glassMeshes = w.glassMeshes;
     this.grassTime = w.grassTime;
 
     const fc = document.createElement("canvas");
@@ -466,6 +440,32 @@ export class Engine {
         zone = r.zone;
       }
     }
+    // Glass is a separate, destructible hit surface. It is checked before solid walls
+    // so a shot through a window visibly breaks the pane instead of being swallowed by it.
+    let glassT = bestT;
+    let glassHit: THREE.Mesh | null = null;
+    const ray = new THREE.Ray(origin, dir);
+    const hitPoint = new THREE.Vector3();
+    for (const pane of this.glassMeshes) {
+      if (!pane.visible) continue;
+      pane.updateMatrixWorld(true);
+      const localRay = ray.clone().applyMatrix4(pane.matrixWorld.clone().invert());
+      const localHit = localRay.intersectBox(new THREE.Box3().setFromObject(pane), hitPoint);
+      if (localHit) {
+        const worldHit = hitPoint.clone().applyMatrix4(pane.matrixWorld);
+        const t = worldHit.distanceTo(origin);
+        if (t > minT && t < glassT) {
+          glassT = t;
+          glassHit = pane;
+        }
+      }
+    }
+    if (glassHit) {
+      bestT = glassT;
+      hitActor = null;
+      this.breakGlass(glassHit, origin, dir);
+    }
+
     for (const b of this.boxes) {
       const t = rayBox(origin, dir, b, bestT);
       if (t > minT && t < bestT) {
@@ -483,6 +483,33 @@ export class Engine {
     this.addTracer(muzzle, end);
     if (hitActor) {
       this.damage(hitActor, w.dmg[zone], a, zone === "head", zone);
+    }
+  }
+
+  breakGlass(pane: THREE.Mesh, origin: THREE.Vector3, dir: THREE.Vector3) {
+    pane.visible = false;
+    const shardMat = new THREE.MeshBasicMaterial({
+      color: "#a8d9e8",
+      transparent: true,
+      opacity: 0.72,
+      side: THREE.DoubleSide,
+    });
+    const center = new THREE.Vector3();
+    pane.getWorldPosition(center);
+    const size = new THREE.Vector3();
+    new THREE.Box3().setFromObject(pane).getSize(size);
+    const shardGeo = new THREE.TetrahedronGeometry(Math.max(0.025, Math.min(0.11, Math.min(size.x, size.y, size.z) * 0.65)), 0);
+    for (let i = 0; i < 8; i++) {
+      const shard = new THREE.Mesh(shardGeo, shardMat);
+      shard.position.copy(center).add(new THREE.Vector3((Math.random()-0.5)*size.x, (Math.random()-0.5)*size.y, (Math.random()-0.5)*Math.max(size.z, 0.04)));
+      shard.userData.glassLife = 0.55;
+      shard.userData.glassVelocity = new THREE.Vector3(
+        dir.x * (1.5 + Math.random()*2.5) + (Math.random()-0.5)*1.5,
+        1.2 + Math.random()*2.2,
+        dir.z * (1.5 + Math.random()*2.5) + (Math.random()-0.5)*1.5
+      );
+      this.scene.add(shard);
+      this.glassShards.push(shard);
     }
   }
 
