@@ -12,6 +12,11 @@ export interface Settings {
   resolution: { w: number; h: number } | null;
   reshade: boolean;
   volume: number;
+  aspect: "16:9" | "4:3";
+  customWidth: number;
+  customHeight: number;
+  centerColor: string;
+  borderColor: string;
 }
 
 export interface FeedItem {
@@ -76,6 +81,11 @@ export const settingsStore = createStore<Settings>({
   resolution: null,
   reshade: false,
   volume: 0.5,
+  aspect: "16:9",
+  customWidth: 1920,
+  customHeight: 1080,
+  centerColor: "#ffffff",
+  borderColor: "#000000",
 });
 
 export const hudStore = createStore<HudState>({
