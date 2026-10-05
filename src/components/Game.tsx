@@ -132,7 +132,7 @@ export function Game() {
 
       {hud.hit && <div key={hud.hit.id} className={`game-hitmarker ${hud.hit.zone === "head" ? "head" : ""}`}>X</div>}
 
-      <div className="game-fps">FPS <strong id="fps-value">--</strong></div>
+      <div className="game-fps">FPS <strong ref={(el) => { if (el && engineRef.current) engineRef.current.fpsEl = el; }}>--</strong></div>
 
       {hud.settingsOpen && <div className="game-settings">
         <div className="game-settings-title">SETTINGS</div>
