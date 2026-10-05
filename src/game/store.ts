@@ -13,7 +13,7 @@ export interface Settings {
   resolution: { w: number; h: number } | null;
   reshade: boolean;
   volume: number;
-  aspect: "16:9" | "4:3";
+  aspect: string;
   customWidth: number;
   customHeight: number;
   centerColor: string;
