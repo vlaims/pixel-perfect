@@ -32,47 +32,90 @@ export class Vehicle {
     this.group.add(this.body);
     this.door.position.set(kind === "car" ? 0.98 : 0, kind === "car" ? 0.72 : 0, kind === "car" ? 0.15 : 0);
     const paint = new THREE.MeshLambertMaterial({ color });
-    const dark = new THREE.MeshLambertMaterial({ color: "#1b1b1f" });
-    const glass = new THREE.MeshLambertMaterial({ color: "#2b3c4a" });
-    const chrome = new THREE.MeshLambertMaterial({ color: "#777777" });
-    const light = new THREE.MeshBasicMaterial({ color: "#fff3c4" });
-    const tail = new THREE.MeshBasicMaterial({ color: "#d01818" });
+    const paintDark = new THREE.MeshLambertMaterial({ color: "#242629" });
+    const tire = new THREE.MeshLambertMaterial({ color: "#17191c" });
+    const glass = new THREE.MeshLambertMaterial({ color: "#253844" });
+    const trim = new THREE.MeshLambertMaterial({ color: "#6a6d6f" });
+    const light = new THREE.MeshBasicMaterial({ color: "#e7dfba" });
+    const tail = new THREE.MeshBasicMaterial({ color: "#8d2b2d" });
+    const indicator = new THREE.MeshBasicMaterial({ color: "#d79b45" });
+    const plate = new THREE.MeshBasicMaterial({ color: "#d4d0c0" });
+
     const add = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, zz: number, parent: THREE.Object3D = this.body) => {
       const mesh = new THREE.Mesh(g, m);
       mesh.position.set(x, y, zz);
-      mesh.castShadow = true;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
       parent.add(mesh);
       return mesh;
     };
-    const wheelGeo = new THREE.CylinderGeometry(kind === "car" ? 0.38 : 0.36, kind === "car" ? 0.38 : 0.36, kind === "car" ? 0.28 : 0.14, 14);
+
+    const wheelGeo = new THREE.CylinderGeometry(
+      kind === "car" ? 0.39 : 0.35,
+      kind === "car" ? 0.39 : 0.35,
+      kind === "car" ? 0.30 : 0.13,
+      12,
+    );
     wheelGeo.rotateZ(Math.PI / 2);
+    const hubGeo = new THREE.CylinderGeometry(kind === "car" ? 0.14 : 0.09, kind === "car" ? 0.14 : 0.09, kind === "car" ? 0.315 : 0.145, 10);
+    hubGeo.rotateZ(Math.PI / 2);
+
     if (kind === "car") {
-      add(new THREE.BoxGeometry(1.9, 0.55, 4.2), paint, 0, 0.6, 0);
-      const cab = add(new THREE.BoxGeometry(1.7, 0.5, 2.1), glass, 0, 1.12, -0.25);
-      cab.scale.set(1, 1, 1);
-      add(new THREE.BoxGeometry(1.72, 0.06, 2.0), paint, 0, 1.39, -0.25);
-      add(new THREE.BoxGeometry(1.95, 0.18, 0.2), chrome, 0, 0.45, 2.1);
-      add(new THREE.BoxGeometry(1.95, 0.18, 0.2), chrome, 0, 0.45, -2.1);
-      add(new THREE.BoxGeometry(0.35, 0.14, 0.05), light, 0.6, 0.7, 2.11);
-      add(new THREE.BoxGeometry(0.35, 0.14, 0.05), light, -0.6, 0.7, 2.11);
-      add(new THREE.BoxGeometry(0.4, 0.12, 0.05), tail, 0.6, 0.72, -2.11);
-      add(new THREE.BoxGeometry(0.4, 0.12, 0.05), tail, -0.6, 0.72, -2.11);
+      add(new THREE.BoxGeometry(1.92, 0.52, 4.12), paint, 0, 0.56, 0);
+      add(new THREE.BoxGeometry(1.78, 0.16, 1.05), paint, 0, 0.84, 1.48);
+      add(new THREE.BoxGeometry(1.72, 0.14, 0.72), paintDark, 0, 0.80, -1.60);
+      add(new THREE.BoxGeometry(1.66, 0.50, 1.94), glass, 0, 1.06, -0.23);
+      add(new THREE.BoxGeometry(1.72, 0.09, 1.88), paint, 0, 1.34, -0.23);
+
+      add(new THREE.BoxGeometry(1.46, 0.32, 0.06), glass, 0, 1.08, 0.72).rotation.x = -0.18;
+      add(new THREE.BoxGeometry(1.46, 0.29, 0.06), glass, 0, 1.08, -1.17).rotation.x = 0.18;
+
+      for (const sx of [-0.86, 0.86]) {
+        add(new THREE.BoxGeometry(0.04, 0.34, 0.70), glass, sx, 1.08, -0.58);
+        add(new THREE.BoxGeometry(0.04, 0.34, 0.60), glass, sx, 1.08, 0.25);
+        add(new THREE.BoxGeometry(0.05, 0.055, 1.56), trim, sx * 1.01, 0.83, -0.15);
+      }
+
+      add(new THREE.BoxGeometry(1.82, 0.16, 0.16), paintDark, 0, 0.43, 2.08);
+      add(new THREE.BoxGeometry(1.68, 0.10, 0.10), trim, 0, 0.50, 2.16);
+      add(new THREE.BoxGeometry(0.62, 0.14, 0.04), paintDark, 0, 0.53, 2.18);
+      add(new THREE.BoxGeometry(1.82, 0.16, 0.16), paintDark, 0, 0.43, -2.08);
+      add(new THREE.BoxGeometry(0.52, 0.13, 0.04), plate, 0, 0.56, -2.17);
+
+      for (const sx of [-0.61, 0.61]) {
+        add(new THREE.BoxGeometry(0.34, 0.13, 0.05), light, sx, 0.70, 2.10);
+        add(new THREE.BoxGeometry(0.17, 0.10, 0.05), indicator, sx * 0.78, 0.69, 2.115);
+        add(new THREE.BoxGeometry(0.34, 0.11, 0.05), tail, sx, 0.69, -2.10);
+        add(new THREE.BoxGeometry(0.15, 0.08, 0.05), indicator, sx, 0.69, -2.115);
+        add(new THREE.BoxGeometry(0.12, 0.10, 0.16), paintDark, sx * 1.04, 1.04, 0.74);
+      }
+
       this.door.position.set(0.98, 0.65, 0.15);
       this.door.rotation.set(0, 0, 0);
       this.body.add(this.door);
+
       for (const [wx, wz] of [[0.92, 1.35], [-0.92, 1.35], [0.92, -1.35], [-0.92, -1.35]]) {
-        this.wheels.push(add(wheelGeo, dark, wx, 0.38, wz, this.group));
+        this.wheels.push(add(wheelGeo, tire, wx, 0.38, wz, this.group));
+        add(hubGeo, trim, wx, 0.38, wz, this.group);
       }
     } else {
-      add(new THREE.BoxGeometry(0.32, 0.4, 1.3), paint, 0, 0.7, 0.05);
-      add(new THREE.BoxGeometry(0.36, 0.3, 0.6), paint, 0, 0.95, 0.35);
-      add(new THREE.BoxGeometry(0.3, 0.12, 0.8), dark, 0, 0.95, -0.3);
-      add(new THREE.BoxGeometry(0.7, 0.05, 0.05), chrome, 0, 1.15, 0.72);
-      add(new THREE.BoxGeometry(0.05, 0.6, 0.05), chrome, 0, 0.8, 0.75).rotation.x = -0.35;
-      add(new THREE.BoxGeometry(0.16, 0.12, 0.05), light, 0, 1.0, 0.82);
-      add(new THREE.BoxGeometry(0.2, 0.08, 0.05), tail, 0, 0.95, -0.72);
-      add(new THREE.BoxGeometry(0.1, 0.1, 0.6), chrome, 0.15, 0.5, -0.4);
-      for (const wz of [0.85, -0.75]) this.wheels.push(add(wheelGeo, dark, 0, 0.36, wz, this.group));
+      add(new THREE.BoxGeometry(0.30, 0.34, 1.28), paint, 0, 0.70, 0.04);
+      add(new THREE.CylinderGeometry(0.19, 0.22, 0.56, 8), paint, 0, 0.90, 0.27).rotation.x = Math.PI / 2;
+      add(new THREE.BoxGeometry(0.38, 0.12, 0.62), trim, 0, 0.98, -0.32);
+      add(new THREE.BoxGeometry(0.25, 0.22, 0.34), trim, 0, 0.60, -0.05);
+      add(new THREE.BoxGeometry(0.05, 0.58, 0.05), trim, 0, 0.82, 0.66).rotation.x = -0.35;
+      add(new THREE.BoxGeometry(0.72, 0.05, 0.05), trim, 0, 1.15, 0.70);
+      add(new THREE.BoxGeometry(0.10, 0.10, 0.22), paintDark, -0.17, 0.62, -0.46);
+      add(new THREE.BoxGeometry(0.10, 0.10, 0.22), paintDark, 0.17, 0.62, -0.46);
+      add(new THREE.CylinderGeometry(0.05, 0.05, 0.72, 7), trim, 0.15, 0.53, -0.36).rotation.x = Math.PI / 2;
+      add(new THREE.BoxGeometry(0.18, 0.13, 0.05), light, 0, 1.00, 0.83);
+      add(new THREE.BoxGeometry(0.20, 0.08, 0.05), tail, 0, 0.96, -0.72);
+      add(new THREE.BoxGeometry(0.44, 0.05, 0.06), trim, 0, 1.05, -0.66);
+
+      for (const wz of [0.85, -0.75]) {
+        this.wheels.push(add(wheelGeo, tire, 0, 0.36, wz, this.group));
+        add(hubGeo, trim, 0, 0.36, wz, this.group);
+      }
     }
     this.syncMesh(1);
   }
