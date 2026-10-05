@@ -230,15 +230,26 @@ export class Engine {
 
   async load(modelUrl: string, sounds: Record<string, string>) {
     const loader = new GLTFLoader();
-    const [gltf] = await Promise.all([
-      loader.loadAsync(modelUrl),
-      ...Object.entries(sounds).map(([k, u]) => this.sfx.load(k, u)),
-    ]);
+    let model: THREE.Object3D;
+
+    // Lovable previews do not always expose project-local asset URLs.
+    // A missing model must not prevent the playable scene from booting.
+    try {
+      const gltf = await loader.loadAsync(modelUrl);
+      model = gltf.scene;
+    } catch (error) {
+      console.warn("Character asset unavailable; using preview mannequin.", error);
+      model = makePreviewMannequin();
+    }
+
+    // Audio is already best-effort in Sfx.load, so these can load independently.
+    await Promise.all(Object.entries(sounds).map(([k, u]) => this.sfx.load(k, u)));
     this.bloodFx = await loadBloodFxDat();
-    const norm = computeNorm(gltf.scene);
+
+    const norm = computeNorm(model);
     const tints = [null, "#ff9a9a", "#9ab8ff", "#b8ff9a", "#ffe29a", "#e19aff", "#9affef", "#ffc29a", "#cccccc"];
     for (let i = 0; i < 9; i++) {
-      const rig = new Rig(gltf.scene, norm, tints[i] ? new THREE.Color(tints[i]!) : null);
+      const rig = new Rig(model, norm, tints[i] ? new THREE.Color(tints[i]!) : null);
       const a = new Actor(i, i === 0 ? "You" : BOT_NAMES[i - 1], i === 0, rig, this.flashMat);
       this.scene.add(a.root, a.guns.ar, a.guns.pistol, a.flash);
       if (i > 0) {
@@ -1034,6 +1045,7 @@ export class Engine {
         seated: a.vehicle ? 1 : 0,
         pistol: a.weapon === "pistol",
         dead: !a.alive,
+        roll: a.rolling > 0 ? 1 - a.rolling / MOVE.ROLL_TIME : 0,
       });
 
       // guns
@@ -1132,4 +1144,27 @@ function angleDiff(a: number, b: number) {
   if (d > Math.PI) d -= Math.PI * 2;
   if (d < -Math.PI) d += Math.PI * 2;
   return d;
+}
+
+function makePreviewMannequin() {
+  const root = new THREE.Group();
+  const skin = new THREE.MeshLambertMaterial({ color: "#b8a18c" });
+  const shirt = new THREE.MeshLambertMaterial({ color: "#46586f" });
+  const pants = new THREE.MeshLambertMaterial({ color: "#24282e" });
+
+  const part = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, sx=1, sy=1, sz=1) => {
+    const mesh = new THREE.Mesh(g, m);
+    mesh.position.set(x,y,z);
+    mesh.scale.set(sx,sy,sz);
+    mesh.castShadow=false;
+    root.add(mesh);
+  };
+
+  part(new THREE.CapsuleGeometry(0.23,0.65,5,8), shirt, 0, 1.08, 0);
+  part(new THREE.SphereGeometry(0.22,10,8), skin, 0, 1.72, 0);
+  part(new THREE.CapsuleGeometry(0.10,0.68,4,7), pants, -0.13, 0.55, 0);
+  part(new THREE.CapsuleGeometry(0.10,0.68,4,7), pants, 0.13, 0.55, 0);
+  part(new THREE.CapsuleGeometry(0.07,0.50,4,7), skin, -0.31, 1.12, 0);
+  part(new THREE.CapsuleGeometry(0.07,0.50,4,7), skin, 0.31, 1.12, 0);
+  return root;
 }
