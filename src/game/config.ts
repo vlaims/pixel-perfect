@@ -62,7 +62,7 @@ export interface VehicleCfg {
 }
 
 export const VEHICLES: Record<"car" | "bike", VehicleCfg> = {
-  car: { accel: 13, brake: 26, max: 30, maxRev: 9, turn: 1.7, radius: 2.1, seatY: 0.55, camBack: 7 },
+  car: { accel: 24, brake: 34, max: 58, maxRev: 12, turn: 1.95, radius: 2.1, seatY: 0.55, camBack: 7 },
   bike: { accel: 22, brake: 30, max: 40, maxRev: 5, turn: 2.8, radius: 1.0, seatY: 0.75, camBack: 4.6 },
 };
 
