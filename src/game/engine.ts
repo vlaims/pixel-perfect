@@ -81,6 +81,8 @@ export class Actor {
   brain: Brain | null = null;
   input: Input = emptyInput();
   entering = 0;
+  rollAngle = 0;
+  rollYaw = 0;
   lastAttacker: Actor | null = null;
 
   constructor(id: number, name: string, isPlayer: boolean, rig: Rig, flashMat: THREE.SpriteMaterial) {
@@ -367,6 +369,8 @@ export class Engine {
     a.weapon = "ar";
     a.reloadT = 0;
     a.rolling = 0;
+    a.rollAngle = 0;
+    a.rollYaw = a.yaw;
     a.vy = 0;
     a.pivot.rotation.set(0, 0, 0);
     a.pivot.position.y = 0.95;
@@ -561,6 +565,11 @@ export class Engine {
 
     if (a.vehicle) return;
 
+    // Roll state is a real travelling tumble, not an in-place spin.
+    // Keep the roll direction stable enough to show a coherent body rotation
+    // while still allowing WASD steering.
+    if (a.rolling <= 0) a.rollAngle = 0;
+
     // stutter-step: alternating A/D taps while W released
     const now = this.time;
     for (const key of ["l", "r"] as const) {
@@ -593,17 +602,30 @@ export class Engine {
       a.rolling = MOVE.ROLL_TIME;
       if (len > 0) a.rollDir.set(dx, 0, dz);
       else a.rollDir.set(fwdX, 0, fwdZ);
+      a.rollYaw = Math.atan2(a.rollDir.x, a.rollDir.z);
+      a.yaw = a.rollYaw;
+      a.rollAngle = 0;
     }
 
     let vx = 0;
     let vz = 0;
     if (a.rolling > 0) {
       a.rolling -= dt;
-      if (len > 0) a.rollDir.set(dx, 0, dz); // mid-roll steering
+      if (len > 0) {
+        const wantedYaw = Math.atan2(dx, dz);
+        a.rollYaw = lerpAngle(a.rollYaw, wantedYaw, 1 - Math.exp(-9 * dt));
+        a.rollDir.set(Math.sin(a.rollYaw), 0, Math.cos(a.rollYaw));
+      }
+      const rollProgress = 1 - Math.max(0, a.rolling) / MOVE.ROLL_TIME;
+      a.rollAngle = Math.min(1, Math.max(0, rollProgress)) * Math.PI * 2;
+      a.yaw = a.rollYaw;
       vx = a.rollDir.x * MOVE.ROLL_SPEED;
       vz = a.rollDir.z * MOVE.ROLL_SPEED;
-      a.yaw = Math.atan2(a.rollDir.x, a.rollDir.z);
-      if (a.rolling <= 0) a.rolling = 0;
+      if (a.rolling <= 0) {
+        a.rolling = 0;
+        a.rollAngle = Math.PI * 2;
+        a.yaw = a.rollYaw;
+      }
     } else if (len > 0) {
       let sp = a.scoping ? MOVE.AIM_WALK : (inp.sprint && inp.f && !inp.b ? MOVE.RUN * 1.28 : MOVE.RUN);
       if (a.boostT > 0) sp *= MOVE.STUTTER_MULT;
@@ -971,7 +993,7 @@ export class Engine {
     const lagK = 1 - Math.exp(-dt / MOVE.LAG);
     for (const a of this.actors) {
       // network lag buffer interpolation
-      if (a.vehicle) a.vis.copy(a.pos);
+      if (a.vehicle || a.rolling > 0) a.vis.copy(a.pos);
       else a.vis.lerp(a.pos, lagK);
       a.root.position.copy(a.vis);
       a.root.rotation.y = a.vehicle ? a.vehicle.yaw : a.yaw;
@@ -987,11 +1009,14 @@ export class Engine {
         a.pivot.position.y = 0.95 - 0.75 * k;
       } else if (a.rolling > 0) {
         const t = 1 - a.rolling / MOVE.ROLL_TIME;
-        a.pivot.rotation.set(t * Math.PI * 2, 0, 0);
-        a.pivot.position.y = 0.95 - Math.sin(t * Math.PI) * 0.45;
+        a.root.rotation.y = a.rollYaw;
+        a.pivot.rotation.set(a.rollAngle, 0, 0);
+        // Lift/crouch through the tumble so the feet do not remain planted.
+        a.pivot.position.y = 0.72 + Math.sin(t * Math.PI) * 0.16;
       } else {
         a.pivot.rotation.set(0, 0, 0);
         a.pivot.position.y = 0.95;
+        a.rollAngle = 0;
       }
       if (a.vehicle && a.vehicle.kind === "bike") a.pivot.rotation.z = a.vehicle.lean;
 
