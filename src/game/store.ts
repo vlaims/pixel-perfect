@@ -76,7 +76,7 @@ function createStore<T extends object>(initial: T) {
 export const settingsStore = createStore<Settings>({
   crosshair: "dot",
   gameMode: "vehicle-only",
-  crossSize: 6,
+  crossSize: 10,
   outline: 1,
   color: "#ffffff",
   sensitivity: 1,
