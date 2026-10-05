@@ -1091,7 +1091,11 @@ export class Engine {
         a.pivot.position.y = 0.95;
         a.rollAngle = 0;
       }
-      if (a.vehicle && a.vehicle.kind === "bike") a.pivot.rotation.z = a.vehicle.lean;
+      if (a.vehicle && a.vehicle.kind === "bike") {
+        // Seat the player into the motorcycle instead of leaving the rig at its standing height.
+        a.pivot.position.y = 0.56;
+        a.pivot.rotation.z = a.vehicle.lean;
+      }
 
       const pitch = a.aimPitch;
       a.rig.pose({
