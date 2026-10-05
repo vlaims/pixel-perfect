@@ -6,9 +6,9 @@ const MODEL_URL =
   "/__l5e/assets-v1/939a0cb9-7bfb-4b86-b6f5-72843aed44ab/male.glb";
 
 const SOUNDS = {
-  fire: "/__l5e/assets-v1/9f6d5c50-0a70-4e1e-9d18-0a2e5a8f6a41/fire.mp3",
+  fire: "/__l5e/assets-v1/3728ba97-4d17-4aa7-917b-17e59c300a2c/fire.mp3",
   shoot: "/__l5e/assets-v1/c1da54f8-2539-4cc5-ab06-a33ae06eaf65/shoot.mp3",
-  reload: "/__l5e/assets-v1/ccd9637b-7fe3-4a16-26f0-e3e2eb123d1adb62262/reload.mp3",
+  reload: "/__l5e/assets-v1/5ce8afb8-392d-437e-adb3-10825f980e27/reload.mp3",
 };
 
 export function Game() {
