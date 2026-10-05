@@ -135,7 +135,7 @@ interface Tracer {
   line: THREE.Line;
   t: number;
 }
-interface Confetti {
+interface LegacyConfetti {
   pos: THREE.Vector3;
   vel: THREE.Vector3;
   rot: THREE.Euler;
@@ -214,14 +214,6 @@ export class Engine {
     fx.fillStyle = grad;
     fx.fillRect(0, 0, 64, 64);
     this.flashMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(fc), blending: THREE.AdditiveBlending, depthWrite: false });
-
-    // confetti
-    const cg = new THREE.PlaneGeometry(0.12, 0.07);
-    this.confettiMesh = new THREE.InstancedMesh(cg, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), 400);
-    this.confettiMesh.count = 0;
-    this.confettiMesh.frustumCulled = false;
-    this.confettiMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(400 * 3), 3);
-    this.scene.add(this.confettiMesh);
 
     // vehicles
     this.vehicles.push(
@@ -1039,34 +1031,26 @@ export class Engine {
         if (t.t <= 0) t.line.visible = false;
       }
     }
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const s = new THREE.Vector3(1, 1, 1);
-    let n = 0;
-    for (let i = 0; i < this.confetti.length; i++) {
-      const c = this.confetti[i];
-      c.life -= dt;
-      c.vel.y -= 9 * dt;
-      c.vel.multiplyScalar(Math.exp(-1.8 * dt));
-      c.pos.addScaledVector(c.vel, dt);
-      c.rot.x += c.spin.x * dt;
-      c.rot.y += c.spin.y * dt;
-      c.rot.z += c.spin.z * dt;
-      const g = heightAt(c.pos.x, c.pos.z) + 0.02;
-      if (c.pos.y < g) {
-        c.pos.y = g;
-        c.vel.set(0, 0, 0);
-        c.spin.set(0, 0, 0);
+    const remove: THREE.Object3D[] = [];
+    this.scene.traverse((o) => {
+      const d = (o as any).userData;
+      if (!d?.velocities) return;
+      d.life -= dt;
+      const p = o.geometry.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < d.velocities.length; i++) {
+        const v = d.velocities[i] as THREE.Vector3;
+        v.y -= d.gravity * dt;
+        p.setXYZ(i, p.getX(i) + v.x * dt, p.getY(i) + v.y * dt, p.getZ(i) + v.z * dt);
       }
-      q.setFromEuler(c.rot);
-      m.compose(c.pos, q, s);
-      this.confettiMesh.setMatrixAt(i, m);
-      n++;
+      p.needsUpdate = true;
+      (o.material as THREE.PointsMaterial).opacity = Math.max(0, d.life / d.maxLife) * 0.72;
+      if (d.life <= 0) remove.push(o);
+    });
+    for (const o of remove) {
+      this.scene.remove(o);
+      o.geometry.dispose();
+      (o.material as THREE.Material).dispose();
     }
-    // drop dead ones from the front (colors shift slightly; acceptable)
-    while (this.confetti.length && this.confetti[0].life <= 0) this.confetti.shift();
-    this.confettiMesh.count = Math.min(n, this.confetti.length);
-    this.confettiMesh.instanceMatrix.needsUpdate = true;
   }
 
   syncHud(dt: number) {
