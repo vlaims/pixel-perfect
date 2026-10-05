@@ -720,7 +720,7 @@ export class Engine {
         a.pivot.position.y = 0.95;
       }
     } else if (len > 0) {
-      let sp = a.scoping ? MOVE.AIM_WALK : (inp.sprint && inp.f && !inp.b ? MOVE.RUN * 1.28 : MOVE.RUN);
+      let sp = a.scoping ? MOVE.AIM_WALK : (inp.sprint && inp.f && !inp.b ? MOVE.SPRINT : MOVE.RUN);
       if (a.boostT > 0) sp *= MOVE.STUTTER_MULT;
       vx = dx * sp;
       vz = dz * sp;
