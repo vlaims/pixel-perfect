@@ -32,6 +32,10 @@ export function Game() {
       engine.resize(Math.max(1, rect.width), Math.max(1, rect.height), dpr);
     };
 
+    const onPointerLockChange = () => {
+      hudStore.set({ locked: document.pointerLockElement === canvas });
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
         e.preventDefault();
@@ -62,6 +66,7 @@ export function Game() {
     const onBlur = () => engine.clearInput();
 
     window.addEventListener("resize", resize);
+    document.addEventListener("pointerlockchange", onPointerLockChange);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("blur", onBlur);
@@ -89,6 +94,7 @@ export function Game() {
 
     return () => {
       disposed = true;
+      document.removeEventListener("pointerlockchange", onPointerLockChange);
       window.removeEventListener("resize", resize);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
