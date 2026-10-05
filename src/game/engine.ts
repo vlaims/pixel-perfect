@@ -189,11 +189,11 @@ export class Engine {
     this.renderer.shadowMap.autoUpdate = false;
 
     // Return to the bright daytime presentation: clear blue sky, warm sun, no moon or stars.
-    const sky = new THREE.Color("#8fc8ee");
+    const sky = new THREE.Color("#b9ddf5");
     this.scene.background = sky;
-    this.scene.fog = new THREE.Fog("#a9d3eb", 95, 235);
-    this.scene.add(new THREE.HemisphereLight("#d9efff", "#6f755f", 0.72));
-    this.sun = new THREE.DirectionalLight("#fff1cf", 1.35);
+    this.scene.fog = new THREE.Fog("#cde8f5", 105, 250);
+    this.scene.add(new THREE.HemisphereLight("#e8f7ff", "#7f856f", 1.0));
+    this.sun = new THREE.DirectionalLight("#fff5dc", 1.65);
     this.sun.position.set(-70, 120, 55);
     this.sun.target.position.set(0, 0, 0);
     this.sun.castShadow = false;
@@ -272,9 +272,10 @@ export class Engine {
       this.actors.push(a);
     }
     this.player = this.actors[0];
-    // Put several bots into the vehicle fleet at startup so moving aim targets are always available.
-    const driverSlots = this.vehicles.slice(0, 6);
-    for (let i = 0; i < driverSlots.length && i + 1 < this.actors.length; i++) {
+    // FFA starts with several bots driving. Vehicle-only assigns every NPC to a car below during spawn.
+    if (settingsStore.get().gameMode !== "vehicle-only") {
+      const driverSlots = this.vehicles.slice(0, 6);
+      for (let i = 0; i < driverSlots.length && i + 1 < this.actors.length; i++) {
       const bot = this.actors[i + 1];
       const vehicle = driverSlots[i];
       bot.pos.copy(vehicle.pos);
@@ -283,8 +284,9 @@ export class Engine {
       bot.aimYaw = vehicle.yaw;
       bot.brain!.goVehicle = vehicle;
       bot.brain!.driveT = 18 + Math.random() * 18;
-      vehicle.beginEntry(bot);
-      bot.entering = 0.65;
+        vehicle.beginEntry(bot);
+        bot.entering = 0.65;
+      }
     }
     this.camYaw = 0;
     hudStore.set({ loading: false });
@@ -412,6 +414,20 @@ export class Engine {
     a.pivot.position.y = 0.95;
     a.yaw = Math.random() * Math.PI * 2;
     a.aimYaw = a.yaw;
+
+    // Vehicle-only mode keeps every NPC inside a car; bikes remain player-only in this mode.
+    if (!a.isPlayer && settingsStore.get().gameMode === "vehicle-only" && a.brain) {
+      const v = this.vehicles.find((x) => x.kind === "car" && !x.driver && !x.entering);
+      if (v) {
+        a.pos.copy(v.pos);
+        a.vis.copy(a.pos);
+        a.yaw = v.yaw;
+        a.aimYaw = v.yaw;
+        a.brain.goVehicle = v;
+        a.brain.driveT = 999999;
+        if (v.beginEntry(a)) a.entering = 0.65;
+      }
+    }
   }
 
   playAt(name: string, a: Actor, vol: number) {
@@ -862,7 +878,7 @@ export class Engine {
       inp.l = dyaw > 0.12 ? 1 : 0;
       inp.r = dyaw < -0.12 ? 1 : 0;
       if (!t && dist < 8) this.pickWander(a);
-      if (br.driveT <= 0 || (t && dist < 10 && Math.abs(v.speed) < 1)) {
+      if (settingsStore.get().gameMode !== "vehicle-only" && (br.driveT <= 0 || (t && dist < 10 && Math.abs(v.speed) < 1))) {
         this.toggleVehicle(a);
         br.goVehicle = null;
         br.thinkT = 0.05;
@@ -873,7 +889,18 @@ export class Engine {
         inp.shootPressed = a.cooldown <= 0 && Math.random() < 0.5;
       }
     } else {
-      if (t) {
+      if (settingsStore.get().gameMode === "vehicle-only") {
+        const v = br.goVehicle && br.goVehicle.kind === "car" ? br.goVehicle : this.vehicles.find((x) => x.kind === "car" && !x.driver && !x.entering);
+        if (v) {
+          br.goVehicle = v;
+          const vd = v.pos.distanceTo(a.pos);
+          if (vd < 3.2) {
+            if (v.beginEntry(a)) a.entering = 0.65;
+          } else {
+            inp.f = 1;
+          }
+        }
+      } else if (t) {
         inp.scope = true;
         if (dist > 26) inp.f = 1;
         else if (dist < 10) inp.b = 1;
