@@ -254,7 +254,7 @@ export function Game() {
                         setSetting("resolution", null);
                       } else {
                         const [w,h]=v.split("x").map(Number);
-                        setSetting("resolution",{w,h});
+                        setSetting("resolution",{w: w ?? 1920, h: h ?? 1080});
                         setSetting("aspect", `${w}:${h}`);
                       }
                     }}>

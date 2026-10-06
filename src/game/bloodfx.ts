@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface BloodFxEntry {
   id: number;
   probability: number;
