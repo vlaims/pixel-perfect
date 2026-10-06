@@ -69,6 +69,7 @@ export class Actor {
   lastStrafeT = -10;
   boostT = 0;
   prevKeys = { l: 0, r: 0 };
+  recoilOffset = 0;
   prevCrouch = false;
   kills = 0;
   deaths = 0;
@@ -343,8 +344,7 @@ export class Engine {
     const s = 0.0022 * settingsStore.get().sensitivity * (this.mouseR ? 0.7 : 1);
     this.camYaw -= dx * s;
     this.camPitch = Math.max(-1.2, Math.min(1.1, this.camPitch - dy * s));
-    this.screenRotationVelocity += dx * 0.003;
-    this.screenRotationVelocity = Math.max(-0.08, Math.min(0.08, this.screenRotationVelocity));
+    this.screenRotationVelocity = THREE.MathUtils.lerp(this.screenRotationVelocity, dx * 0.003, 0.2);
   }
   clearInput() {
     this.keys.clear();
@@ -420,7 +420,8 @@ export class Engine {
     a.prevCrouch = false;
     a.vy = 0;
     a.pivot.rotation.set(0, 0, 0);
-    a.pivot.position.y = 0.95;
+    a.pivot.position.y = 0.9;
+    a.recoilOffset = 0;
     a.yaw = Math.random() * Math.PI * 2;
     a.aimYaw = a.yaw;
 
@@ -688,25 +689,11 @@ export class Engine {
     // while still allowing WASD steering.
     if (a.rolling <= 0) a.rollAngle = 0;
 
-    // stutter-step: alternating A/D taps while W released
-    const now = this.time;
-    for (const key of ["l", "r"] as const) {
-      if (inp[key] && !a.prevKeys[key]) {
-        if (!inp.f && a.lastStrafe && a.lastStrafe !== key && now - a.lastStrafeT < MOVE.STUTTER_WINDOW) a.boostT = 0.35;
-        a.lastStrafe = key;
-        a.lastStrafeT = now;
-      }
-    }
+    // Keep the supplied controller's simple grounded input model: no extra
+    // acceleration bursts or strafe-stutter boosts.
     a.prevKeys.l = inp.l;
     a.prevKeys.r = inp.r;
-
-    // C/CTRL gives the short requested speed burst while sprinting forward.
-    const crouchPressed = Boolean(inp.crouch) && !a.prevCrouch;
-    if (crouchPressed && inp.sprint && inp.f && !inp.b) {
-      a.boostT = MOVE.GLITCH_TIME;
-    }
     a.prevCrouch = Boolean(inp.crouch);
-    a.boostT -= dt;
 
     const fwdX = Math.sin(a.aimYaw);
     const fwdZ = Math.cos(a.aimYaw);
@@ -750,13 +737,14 @@ export class Engine {
         a.rollAngle = Math.PI * 2;
         a.yaw = a.rollYaw;
         a.pivot.rotation.set(0, 0, 0);
-        a.pivot.position.y = 0.95;
+        a.pivot.position.y = 0.9;
       }
     } else if (len > 0) {
-      // FiveM controller speed tiers: walk, dedicated sprint, and short C/CTRL boost.
-      let sp = a.scoping ? MOVE.AIM_WALK : (inp.sprint && inp.f && !inp.b ? MOVE.SPRINT : MOVE.RUN);
-      if (a.crouching) sp *= 0.58;
-      if (a.boostT > 0) sp = MOVE.GLITCH_BOOST;
+      // Match the supplied FiveM controller exactly: crouch, sprint, then walk.
+      // ADS changes the camera FOV but does not change the base movement tier.
+      let sp = MOVE.RUN;
+      if (a.crouching) sp = MOVE.CROUCH;
+      else if (inp.sprint) sp = MOVE.SPRINT;
       vx = dx * sp;
       vz = dz * sp;
     }
@@ -764,7 +752,7 @@ export class Engine {
       // Match the supplied controller's input-latency feel: velocity eases toward
       // the target instead of snapping instantly every frame.
       const targetVelocity = tv.set(vx, 0, vz);
-      a.velocity.lerp(targetVelocity, 0.22);
+      a.velocity.lerp(targetVelocity, 0.15);
       vx = a.velocity.x;
       vz = a.velocity.z;
     } else {
@@ -843,7 +831,9 @@ export class Engine {
       return;
     }
     this.fire(a, origin, dir, minT);
-    if (a.isPlayer) this.camPitch = Math.max(-1.2, Math.min(1.1, this.camPitch - 0.018));
+    if (a.isPlayer) {
+      a.recoilOffset = 0.02;
+    }
   }
 
   updateBot(a: Actor, dt: number) {
@@ -1128,7 +1118,7 @@ export class Engine {
       back = scoping ? p.vehicle.cfg.camBack * 0.7 : p.vehicle.cfg.camBack;
       side = scoping ? 0.6 * this.shoulder : 0;
     } else {
-      pivot = tv.set(p.vis.x, p.vis.y + (p.rolling > 0 ? 1.2 : p.crouching ? 1.0 : 1.6), p.vis.z);
+      pivot = tv.set(p.vis.x, p.vis.y + (p.rolling > 0 ? 1.2 : p.crouching ? 0.5 : 0.9) + p.recoilOffset, p.vis.z);
       back = scoping ? 1.5 : 3.0;
       side = (scoping ? 0.55 : 0.5) * this.shoulder;
     }
@@ -1137,10 +1127,10 @@ export class Engine {
     if (target.y < gh) target.y = gh;
     cam.position.lerp(target, 1 - Math.exp(-30 * dt));
     cam.lookAt(cam.position.x + fx, cam.position.y + fy, cam.position.z + fz);
-    this.cameraTilt += (-this.screenRotationVelocity * 0.4 - this.cameraTilt) * 0.1;
+    this.cameraTilt += (-this.screenRotationVelocity * 0.2 - this.cameraTilt) * 0.1;
     cam.rotation.z = this.cameraTilt;
-    this.screenRotationVelocity *= 0.9;
-    const fov = scoping ? 28 : 62;
+    this.screenRotationVelocity = THREE.MathUtils.lerp(this.screenRotationVelocity, 0, 0.1);
+    const fov = scoping ? 35 : 65;
     if (Math.abs(cam.fov - fov) > 0.05) {
       cam.fov += (fov - cam.fov) * (1 - Math.exp(-18 * dt));
       cam.updateProjectionMatrix();
@@ -1160,7 +1150,7 @@ export class Engine {
       a.root.rotation.y = a.vehicle ? a.vehicle.yaw : a.yaw;
       // Cars fully occlude the seated character to prevent mesh/roof clipping.
       a.rig.holder.visible = !(a.vehicle && a.vehicle.kind === "car");
-      a.phase += dt * (a.moving > 0 ? 2 + a.moving * 1.45 : 0);
+      a.phase += dt * (a.moving > 0 ? 8 * (a.input.sprint ? 2.2 : a.crouching ? 0.8 : 1.4) : 0);
       const aimTarget = a.alive && (a.scoping || a.input.shoot || a.cooldown > -0.6) && a.radio < 0.5 ? 1 : 0;
       a.aimBlend += (aimTarget - a.aimBlend) * (1 - Math.exp(-80 * dt));
 
@@ -1171,7 +1161,7 @@ export class Engine {
       } else if (a.crouching) {
         // Held C keeps the player in a lowered stance; releasing C restores standing height.
         a.pivot.rotation.set(0, 0, 0);
-        a.pivot.position.y = 0.62;
+        a.pivot.position.y = 0.5;
         a.rollAngle = 0;
       } else if (a.rolling > 0) {
         const t = 1 - a.rolling / MOVE.ROLL_TIME;
@@ -1182,7 +1172,7 @@ export class Engine {
         a.pivot.position.y = 0.58 + Math.sin(rollEase * Math.PI) * 0.12;
       } else {
         a.pivot.rotation.set(0, 0, 0);
-        a.pivot.position.y = 0.95;
+        a.pivot.position.y = 0.9;
         a.rollAngle = 0;
       }
       if (a.vehicle && a.vehicle.kind === "bike") {
@@ -1227,6 +1217,7 @@ export class Engine {
         a.flash.position.copy(g.position).add(tv.set(0, 0.02, off).applyEuler(g.rotation));
         a.flash.material.rotation = Math.random() * 6;
       }
+      a.recoilOffset = THREE.MathUtils.lerp(a.recoilOffset, 0, 0.25);
       a.root.visible = !(a.isPlayer && this.camera.position.distanceTo(tv2.set(a.vis.x, a.vis.y + 1.5, a.vis.z)) < 0.6);
     }
     void UP;
