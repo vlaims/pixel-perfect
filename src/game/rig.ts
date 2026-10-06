@@ -96,34 +96,17 @@ export class Rig {
   }
 
   pose(p: PoseInput) {
-    // RP-style locomotion: compact walking, stronger sprint stride, and an
-    // upright torso so the character reads like a GTA/FiveM third-person rig.
-    const cadence = p.sprint ? 1.18 : 0.92;
-    const s = Math.sin(p.phase * cadence);
-    const c = Math.cos(p.phase * cadence);
-    const mv = Math.min(1, p.move);
-    const sprint = p.sprint && mv > 0.01;
+    // Match the supplied FiveM controller's simple procedural animation:
+    // walk/sprint/crouch use the same compact gait, with cadence driven by
+    // the movement speed selected in Engine.moveActor().
+    const s = Math.sin(p.phase);
+    const c = Math.cos(p.phase);
+    const mv = Math.min(1, Math.max(0, p.move));
+    const moving = mv > 0.01;
+    const a = p.aim;
     const roll = Math.max(0, Math.min(1, p.roll));
 
-    // Held crouch is a real skeletal stance, not only a camera/height offset.
-    if (p.crouch && roll <= 0.001 && p.seated <= 0.5) {
-      this.rot("LeftUpLeg", -1.05, 0, 0);
-      this.rot("RightUpLeg", -1.05, 0, 0);
-      this.rot("LeftLeg", 1.65, 0, 0);
-      this.rot("RightLeg", 1.65, 0, 0);
-      this.rot("Spine", 0.16, 0, 0);
-      this.rot("Spine1", -0.08, 0, 0);
-      this.rot("Spine2", -0.04, 0, 0);
-      this.rot("Head", -0.08, 0, 0);
-      this.rot("RightArm", 0.18, 0.35, 0.92, "YXZ");
-      this.rot("RightForeArm", 0, 0.45, 0);
-      this.rot("LeftArm", -0.18, -0.35, -0.92, "YXZ");
-      this.rot("LeftForeArm", 0, -0.45, 0);
-      return;
-    }
-
-    // Compact the character before the tumble so the body visibly rolls
-    // through space instead of rotating in a standing idle pose.
+    // Roll keeps the existing full-body tuck/rotation used by Pixel Perfect.
     if (roll > 0.001) {
       const tuck = Math.sin(Math.PI * Math.min(1, roll) * 0.9);
       this.rot("LeftUpLeg", -1.05 - 0.65 * tuck, 0, -0.14 * tuck);
@@ -146,44 +129,46 @@ export class Rig {
       this.rot("RightUpLeg", -1.35, 0, 0.15);
       this.rot("LeftLeg", 1.4, 0, 0);
       this.rot("RightLeg", 1.4, 0, 0);
+    } else if (moving) {
+      // Directly mirrors the pasted demo's 0.6 leg swing and 0.3 arm swing.
+      this.rot("LeftUpLeg", -s * 0.3 * mv, 0, 0);
+      this.rot("RightUpLeg", s * 0.3 * mv, 0, 0);
+      this.rot("LeftLeg", s * 0.6 * mv, 0, 0);
+      this.rot("RightLeg", -s * 0.6 * mv, 0, 0);
     } else {
-      if (sprint) {
-        // Distinct RP sprint: longer stride, higher knees and a small forward
-        // body pitch instead of simply scaling the walking animation.
-        this.rot("LeftUpLeg", -Math.max(0, s) * 1.32 * mv, 0, 0);
-        this.rot("RightUpLeg", Math.max(0, -s) * 1.32 * mv, 0, 0);
-        this.rot("LeftLeg", Math.max(0, -c) * 1.52 * mv + 0.10, 0, 0);
-        this.rot("RightLeg", Math.max(0, c) * 1.52 * mv + 0.10, 0, 0);
-      } else {
-        // Compact walk with a softer heel/knee cycle.
-        this.rot("LeftUpLeg", -s * 0.52 * mv, 0, 0);
-        this.rot("RightUpLeg", s * 0.52 * mv, 0, 0);
-        this.rot("LeftLeg", Math.max(0, -c) * 0.78 * mv + 0.035, 0, 0);
-        this.rot("RightLeg", Math.max(0, c) * 0.78 * mv + 0.035, 0, 0);
-      }
+      this.rot("LeftUpLeg", 0, 0, 0);
+      this.rot("RightUpLeg", 0, 0, 0);
+      this.rot("LeftLeg", 0, 0, 0);
+      this.rot("RightLeg", 0, 0, 0);
     }
-    this.rot("Spine", sprint ? 0.22 + 0.08 * mv : 0.025 * mv, s * 0.045 * mv * (1 - p.aim), 0);
-    this.rot("Spine1", -p.pitch * 0.5 * p.aim, 0, 0);
-    this.rot("Spine2", -p.pitch * 0.5 * p.aim, 0, 0);
+
+    // Upright FiveM-style torso/head with a small aim pitch.
+    this.rot("Spine", 0.025 * mv, 0, 0);
+    this.rot("Spine1", -p.pitch * 0.5 * a, 0, 0);
+    this.rot("Spine2", -p.pitch * 0.5 * a, 0, 0);
     this.rot("Head", -p.pitch * 0.3, 0, 0);
 
-    const a = p.aim;
-    // Right arm: down at side (low ready) -> forward aim
-    const rDown = (sprint ? 0.9 : 1.15) * (1 - a);
-    const rFwd = (p.pistol ? 1.5 : 1.35) * a + 0.35 * (1 - a);
-    this.rot("RightArm", c * 0.25 * mv * (1 - a), rFwd, rDown + 0.08 * a, "YXZ");
+    // Supplied controller keeps the weapon arm in a stable ready pose and
+    // lets the opposite arm provide the visible locomotion swing.
+    const rightReadyX = 0.8;
+    const rightReadyZ = -0.3;
+    this.rot("RightArm", rightReadyX - 0.35 * a, 0.18 * a, rightReadyZ, "YXZ");
     this.rot("RightForeArm", 0, 0.25 * a + 0.5 * (1 - a), 0);
 
     if (p.radio > 0.01) {
-      const r = p.radio;
-      this.rot("LeftArm", 0, -0.45 * r - 1.2 * a * (1 - r), (-1.2 * (1 - a) * (1 - r)) - 0.2 * r, "YXZ");
-      this.rot("LeftForeArm", 0, -0.2 * r, 2.55 * r);
+      const q = p.radio;
+      this.rot("LeftArm", 0, -0.45 * q - 1.2 * a * (1 - q), -0.2 * q, "YXZ");
+      this.rot("LeftForeArm", 0, -0.2 * q, 2.55 * q);
+    } else if (moving) {
+      this.rot("LeftArm", -s * 0.3 * mv, -0.12 * a, -0.08 * a, "YXZ");
+      this.rot("LeftForeArm", 0, -(p.pistol ? 0.35 : 0.75) * a - 0.4 * (1 - a), 0);
     } else {
-      const lDown = (sprint ? -0.9 : -1.2) * (1 - a);
-      const lFwd = -(p.pistol ? 1.45 : 1.25) * a - 0.25 * (1 - a);
-      this.rot("LeftArm", -c * 0.25 * mv * (1 - a), lFwd, lDown, "YXZ");
+      this.rot("LeftArm", 0.2 * (1 - a), -0.12 * a, -0.08 * a, "YXZ");
       this.rot("LeftForeArm", 0, -(p.pistol ? 0.35 : 0.75) * a - 0.4 * (1 - a), 0);
     }
+
+    // Held crouch is represented by Engine's lowered pivot (0.5 vs 0.9),
+    // while keeping the same gait/cadence as the supplied controller.
   }
 }
 
