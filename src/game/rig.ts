@@ -95,9 +95,12 @@ export class Rig {
   }
 
   pose(p: PoseInput) {
-    const s = Math.sin(p.phase);
-    const c = Math.cos(p.phase);
-    const mv = p.move;
+    // RP-style locomotion: compact walking, stronger sprint stride, and an
+    // upright torso so the character reads like a GTA/FiveM third-person rig.
+    const cadence = p.sprint ? 1.18 : 0.92;
+    const s = Math.sin(p.phase * cadence);
+    const c = Math.cos(p.phase * cadence);
+    const mv = Math.min(1, p.move);
     const sprint = p.sprint && mv > 0.01;
     const roll = Math.max(0, Math.min(1, p.roll));
 
@@ -127,18 +130,21 @@ export class Rig {
       this.rot("RightLeg", 1.4, 0, 0);
     } else {
       if (sprint) {
-        this.rot("LeftUpLeg", -Math.max(0, s) * 1.2, 0, 0);
-        this.rot("RightUpLeg", Math.max(0, -s) * 1.2, 0, 0);
-        this.rot("LeftLeg", Math.max(0, -c) * 1.4 + 0.08, 0, 0);
-        this.rot("RightLeg", Math.max(0, c) * 1.4 + 0.08, 0, 0);
+        // Distinct RP sprint: longer stride, higher knees and a small forward
+        // body pitch instead of simply scaling the walking animation.
+        this.rot("LeftUpLeg", -Math.max(0, s) * 1.32 * mv, 0, 0);
+        this.rot("RightUpLeg", Math.max(0, -s) * 1.32 * mv, 0, 0);
+        this.rot("LeftLeg", Math.max(0, -c) * 1.52 * mv + 0.10, 0, 0);
+        this.rot("RightLeg", Math.max(0, c) * 1.52 * mv + 0.10, 0, 0);
       } else {
-        this.rot("LeftUpLeg", -s * 0.65 * mv, 0, 0);
-        this.rot("RightUpLeg", s * 0.65 * mv, 0, 0);
-        this.rot("LeftLeg", Math.max(0, -c) * 1.0 * mv + 0.05, 0, 0);
-        this.rot("RightLeg", Math.max(0, c) * 1.0 * mv + 0.05, 0, 0);
+        // Compact walk with a softer heel/knee cycle.
+        this.rot("LeftUpLeg", -s * 0.52 * mv, 0, 0);
+        this.rot("RightUpLeg", s * 0.52 * mv, 0, 0);
+        this.rot("LeftLeg", Math.max(0, -c) * 0.78 * mv + 0.035, 0, 0);
+        this.rot("RightLeg", Math.max(0, c) * 0.78 * mv + 0.035, 0, 0);
       }
     }
-    this.rot("Spine", sprint ? 0.30 : 0.04 * mv, s * 0.06 * mv * (1 - p.aim), 0);
+    this.rot("Spine", sprint ? 0.22 + 0.08 * mv : 0.025 * mv, s * 0.045 * mv * (1 - p.aim), 0);
     this.rot("Spine1", -p.pitch * 0.5 * p.aim, 0, 0);
     this.rot("Spine2", -p.pitch * 0.5 * p.aim, 0, 0);
     this.rot("Head", -p.pitch * 0.3, 0, 0);
