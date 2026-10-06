@@ -25,6 +25,7 @@ export interface PoseInput {
   pistol: boolean;
   dead: boolean;
   sprint: boolean;
+  crouch: boolean;
   roll: number;
 }
 
@@ -103,6 +104,23 @@ export class Rig {
     const mv = Math.min(1, p.move);
     const sprint = p.sprint && mv > 0.01;
     const roll = Math.max(0, Math.min(1, p.roll));
+
+    // Held crouch is a real skeletal stance, not only a camera/height offset.
+    if (p.crouch && roll <= 0.001 && p.seated <= 0.5) {
+      this.rot("LeftUpLeg", -1.05, 0, 0);
+      this.rot("RightUpLeg", -1.05, 0, 0);
+      this.rot("LeftLeg", 1.65, 0, 0);
+      this.rot("RightLeg", 1.65, 0, 0);
+      this.rot("Spine", 0.16, 0, 0);
+      this.rot("Spine1", -0.08, 0, 0);
+      this.rot("Spine2", -0.04, 0, 0);
+      this.rot("Head", -0.08, 0, 0);
+      this.rot("RightArm", 0.18, 0.35, 0.92, "YXZ");
+      this.rot("RightForeArm", 0, 0.45, 0);
+      this.rot("LeftArm", -0.18, -0.35, -0.92, "YXZ");
+      this.rot("LeftForeArm", 0, -0.45, 0);
+      return;
+    }
 
     // Compact the character before the tumble so the body visibly rolls
     // through space instead of rotating in a standing idle pose.
