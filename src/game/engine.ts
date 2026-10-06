@@ -63,11 +63,13 @@ export class Actor {
   radio = 0;
   vehicle: Vehicle | null = null;
   moving = 0;
+  velocity = new THREE.Vector3();
   phase = 0;
   lastStrafe: "l" | "r" | null = null;
   lastStrafeT = -10;
   boostT = 0;
   prevKeys = { l: 0, r: 0 };
+  prevCrouch = false;
   kills = 0;
   deaths = 0;
   deadT = 0;
@@ -158,6 +160,8 @@ export class Engine {
   player!: Actor;
   camYaw = 0;
   camPitch = 0;
+  screenRotationVelocity = 0;
+  cameraTilt = 0;
   shoulder = 1;
   keys = new Set<string>();
   mouseL = false;
@@ -339,6 +343,8 @@ export class Engine {
     const s = 0.0022 * settingsStore.get().sensitivity * (this.mouseR ? 0.7 : 1);
     this.camYaw -= dx * s;
     this.camPitch = Math.max(-1.2, Math.min(1.1, this.camPitch - dy * s));
+    this.screenRotationVelocity += dx * 0.003;
+    this.screenRotationVelocity = Math.max(-0.08, Math.min(0.08, this.screenRotationVelocity));
   }
   clearInput() {
     this.keys.clear();
@@ -410,6 +416,8 @@ export class Engine {
     a.rolling = 0;
     a.rollAngle = 0;
     a.rollYaw = a.yaw;
+    a.velocity.set(0, 0, 0);
+    a.prevCrouch = false;
     a.vy = 0;
     a.pivot.rotation.set(0, 0, 0);
     a.pivot.position.y = 0.95;
@@ -693,9 +701,11 @@ export class Engine {
     a.prevKeys.r = inp.r;
 
     // C/CTRL gives the short requested speed burst while sprinting forward.
-    if (inp.crouch && inp.sprint && inp.f && !inp.b && a.boostT <= 0) {
+    const crouchPressed = Boolean(inp.crouch) && !a.prevCrouch;
+    if (crouchPressed && inp.sprint && inp.f && !inp.b) {
       a.boostT = MOVE.GLITCH_TIME;
     }
+    a.prevCrouch = Boolean(inp.crouch);
     a.boostT -= dt;
 
     const fwdX = Math.sin(a.aimYaw);
@@ -750,7 +760,17 @@ export class Engine {
       vx = dx * sp;
       vz = dz * sp;
     }
-    a.moving = len > 0 || a.rolling > 0 ? Math.hypot(vx, vz) : 0;
+    if (a.rolling <= 0) {
+      // Match the supplied controller's input-latency feel: velocity eases toward
+      // the target instead of snapping instantly every frame.
+      const targetVelocity = tv.set(vx, 0, vz);
+      a.velocity.lerp(targetVelocity, 0.22);
+      vx = a.velocity.x;
+      vz = a.velocity.z;
+    } else {
+      a.velocity.set(vx, 0, vz);
+    }
+    a.moving = Math.hypot(a.velocity.x, a.velocity.z);
 
     // facing
     if (a.rolling <= 0) {
@@ -1117,6 +1137,9 @@ export class Engine {
     if (target.y < gh) target.y = gh;
     cam.position.lerp(target, 1 - Math.exp(-30 * dt));
     cam.lookAt(cam.position.x + fx, cam.position.y + fy, cam.position.z + fz);
+    this.cameraTilt += (-this.screenRotationVelocity * 0.4 - this.cameraTilt) * 0.1;
+    cam.rotation.z = this.cameraTilt;
+    this.screenRotationVelocity *= 0.9;
     const fov = scoping ? 28 : 62;
     if (Math.abs(cam.fov - fov) > 0.05) {
       cam.fov += (fov - cam.fov) * (1 - Math.exp(-18 * dt));
