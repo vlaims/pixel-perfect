@@ -691,6 +691,11 @@ export class Engine {
     }
     a.prevKeys.l = inp.l;
     a.prevKeys.r = inp.r;
+
+    // C/CTRL gives the short requested speed burst while sprinting forward.
+    if (inp.crouch && inp.sprint && inp.f && !inp.b && a.boostT <= 0) {
+      a.boostT = MOVE.GLITCH_TIME;
+    }
     a.boostT -= dt;
 
     const fwdX = Math.sin(a.aimYaw);
@@ -707,11 +712,10 @@ export class Engine {
       dz /= len;
     }
 
-    // roll trigger: only while scoping
-    if (inp.rollPressed && a.scoping && a.rolling <= 0 && a.grounded && a.radio < 0.5) {
+    // FiveM-style combat roll: Space while moving, regardless of ADS state.
+    if (inp.rollPressed && len > 0 && a.rolling <= 0 && a.grounded && a.radio < 0.5) {
       a.rolling = MOVE.ROLL_TIME;
-      if (len > 0) a.rollDir.set(dx, 0, dz);
-      else a.rollDir.set(fwdX, 0, fwdZ);
+      a.rollDir.set(dx, 0, dz);
       a.rollYaw = Math.atan2(a.rollDir.x, a.rollDir.z);
       a.yaw = a.rollYaw;
       a.rollAngle = 0;
@@ -723,7 +727,7 @@ export class Engine {
       a.rolling -= dt;
       if (len > 0) {
         const wantedYaw = Math.atan2(dx, dz);
-        a.rollYaw = lerpAngle(a.rollYaw, wantedYaw, 1 - Math.exp(-9 * dt));
+        a.rollYaw = lerpAngle(a.rollYaw, wantedYaw, 1 - Math.exp(-12 * dt));
         a.rollDir.set(Math.sin(a.rollYaw), 0, Math.cos(a.rollYaw));
       }
       const rollProgress = 1 - Math.max(0, a.rolling) / MOVE.ROLL_TIME;
@@ -739,9 +743,10 @@ export class Engine {
         a.pivot.position.y = 0.95;
       }
     } else if (len > 0) {
+      // FiveM controller speed tiers: walk, dedicated sprint, and short C/CTRL boost.
       let sp = a.scoping ? MOVE.AIM_WALK : (inp.sprint && inp.f && !inp.b ? MOVE.SPRINT : MOVE.RUN);
       if (a.crouching) sp *= 0.58;
-      if (a.boostT > 0) sp *= MOVE.STUTTER_MULT;
+      if (a.boostT > 0) sp = MOVE.GLITCH_BOOST;
       vx = dx * sp;
       vz = dz * sp;
     }
@@ -818,6 +823,7 @@ export class Engine {
       return;
     }
     this.fire(a, origin, dir, minT);
+    if (a.isPlayer) this.camPitch = Math.max(-1.2, Math.min(1.1, this.camPitch - 0.018));
   }
 
   updateBot(a: Actor, dt: number) {
@@ -1111,7 +1117,7 @@ export class Engine {
     if (target.y < gh) target.y = gh;
     cam.position.lerp(target, 1 - Math.exp(-30 * dt));
     cam.lookAt(cam.position.x + fx, cam.position.y + fy, cam.position.z + fz);
-    const fov = scoping ? 52 : 70;
+    const fov = scoping ? 28 : 62;
     if (Math.abs(cam.fov - fov) > 0.05) {
       cam.fov += (fov - cam.fov) * (1 - Math.exp(-18 * dt));
       cam.updateProjectionMatrix();
@@ -1167,6 +1173,7 @@ export class Engine {
         phase: a.phase,
         move: a.vehicle || !a.alive ? 0 : Math.min(1, a.moving / MOVE.RUN) * (a.rolling > 0 ? 0 : 1),
          sprint: !a.vehicle && a.input.sprint && a.input.f && !a.input.b && a.moving > MOVE.RUN * 0.9,
+        crouch: a.crouching,
         aim: a.rolling > 0 ? 0.2 : a.aimBlend,
         pitch: a.vehicle ? pitch * 0.5 : pitch,
         radio: a.radio,
