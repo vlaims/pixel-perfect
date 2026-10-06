@@ -36,13 +36,15 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
 };
 
 export const MOVE = {
-  RUN: 6.2,
-  SPRINT: 8.5,
+  RUN: 7.2,
+  SPRINT: 12.8,
+  GLITCH_BOOST: 26.5,
+  GLITCH_TIME: 0.15,
   AIM_WALK: 3.6,
   STUTTER_MULT: 1.15,
   STUTTER_WINDOW: 0.3,
-  ROLL_TIME: 0.6,
-  ROLL_SPEED: 9.2,
+  ROLL_TIME: 0.52,
+  ROLL_SPEED: 17.5,
   LAG: 0.05,
   GRAVITY: 25,
   STEP: 0.6,
