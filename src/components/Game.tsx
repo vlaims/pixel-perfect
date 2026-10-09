@@ -177,6 +177,7 @@ export function Game() {
     const onPointerLockChange = () => {
       const locked = document.pointerLockElement === canvas;
       hudStore.set({ locked });
+      if (locked) setLockError(null);
       if (!locked) {
         engine.clearInput();
         setMouseR(false);
@@ -198,7 +199,12 @@ export function Game() {
     const onMouseDown = (e: MouseEvent) => {
       if (hudStore.get().settingsOpen) return;
       if (document.pointerLockElement !== canvas) {
-        void canvas.requestPointerLock?.();
+        canvas.focus({ preventScroll: true });
+        try {
+          Promise.resolve(canvas.requestPointerLock?.()).then(() => setLockError(null)).catch(() => setLockError("Mouse capture was blocked. Click the game again to retry."));
+        } catch {
+          setLockError("Mouse capture was blocked. Click the game again to retry.");
+        }
         engine.sfx.resume();
         return;
       }
@@ -212,7 +218,8 @@ export function Game() {
     const onMouseMove = (e: MouseEvent) => {
       if (playing()) engine.onLook(e.movementX, e.movementY);
     };
-    const onContextMenu = (e: MouseEvent) => e.preventDefault();\n    const onPointerLockError = () => setLockError("Mouse capture failed. Click the game to try again.");
+    const onContextMenu = (e: MouseEvent) => e.preventDefault();
+    const onPointerLockError = () => setLockError("Mouse capture failed. Click the game to try again.");
     const onBlur = () => {
       engine.clearInput();
       setMouseR(false);
@@ -221,7 +228,8 @@ export function Game() {
       if (document.hidden) onBlur();
     };
 
-    document.addEventListener("pointerlockchange", onPointerLockChange);\n    document.addEventListener("pointerlockerror", onPointerLockError);
+    document.addEventListener("pointerlockchange", onPointerLockChange);
+    document.addEventListener("pointerlockerror", onPointerLockError);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -247,7 +255,8 @@ export function Game() {
 
     return () => {
       disposed = true;
-      document.removeEventListener("pointerlockchange", onPointerLockChange);\n      document.removeEventListener("pointerlockerror", onPointerLockError);
+      document.removeEventListener("pointerlockchange", onPointerLockChange);
+      document.removeEventListener("pointerlockerror", onPointerLockError);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
