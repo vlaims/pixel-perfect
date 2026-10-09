@@ -105,6 +105,7 @@ export class Rig {
     const moving = mv > 0.01;
     const a = p.aim;
     const roll = Math.max(0, Math.min(1, p.roll));
+    const idle = moving || p.dead || p.seated > 0.5 || roll > 0 ? 0 : Math.sin(p.phase * 0.7);
 
     // Roll keeps the existing full-body tuck/rotation used by Pixel Perfect.
     if (roll > 0.001) {
@@ -149,29 +150,28 @@ export class Rig {
     // Pitch is countered at the head so the character keeps looking ahead.
     const forwardLean = p.crouch ? 0.16 : p.sprint && moving ? -0.14 : moving ? -0.055 : 0;
     const lateralLean = moving && !p.crouch && a < 0.6 ? c * 0.025 * mv : 0;
-    this.rot("Spine", forwardLean + 0.025 * mv, 0, lateralLean);
+    this.rot("Spine", forwardLean + 0.025 * mv + idle * 0.012, 0, lateralLean + idle * 0.008);
     this.rot("Spine1", -p.pitch * 0.38 * a + (p.sprint && moving ? 0.06 : 0), 0, lateralLean * 0.55);
     this.rot("Spine2", -p.pitch * 0.62 * a, 0, lateralLean * 0.35);
-    this.rot("Head", -p.pitch * 0.3 - forwardLean * 0.45, 0, -lateralLean * 0.6);
+    this.rot("Head", -p.pitch * 0.3 - forwardLean * 0.45 + idle * 0.012, idle * 0.018, -lateralLean * 0.6 - idle * 0.012);
 
-    // Supplied controller keeps the weapon arm in a stable ready pose and
-    // lets the opposite arm provide the visible locomotion swing.
-    const rightReadyX = 0.8;
-    const rightReadyZ = -0.3;
-    this.rot("RightArm", rightReadyX - 0.35 * a, 0.18 * a, rightReadyZ, "YXZ");
-    this.rot("RightForeArm", 0, 0.25 * a + 0.5 * (1 - a), 0);
+    // Blend from a relaxed low-ready stance into a stable firing pose.
+    this.rot("RightArm", 0.8 - 0.95 * a + (moving && a < 0.4 ? -s * 0.1 * mv : 0), 0.12 * a, -0.3 + 0.08 * a, "YXZ");
+    this.rot("RightForeArm", -0.12 * a, 0.18 * (1 - a) + 0.12 * a, 0.04 * a);
 
     if (p.radio > 0.01) {
       const q = p.radio;
-      this.rot("LeftArm", 0, -0.45 * q - 1.2 * a * (1 - q), -0.2 * q, "YXZ");
-      this.rot("LeftForeArm", 0, -0.2 * q, 2.55 * q);
-    } else if (moving) {
-      const armSwing = p.crouch ? 0.10 : p.sprint ? 0.52 : 0.30;
-      this.rot("LeftArm", -s * armSwing * mv, -0.12 * a, -0.08 * a, "YXZ");
-      this.rot("LeftForeArm", 0, -(p.pistol ? 0.35 : 0.75) * a - (p.sprint ? 0.18 : 0.4) * (1 - a), 0);
+      this.rot("LeftArm", -0.15, -0.45 * q, -0.2 * q, "YXZ");
+      this.rot("LeftForeArm", 0.05, -0.2 * q, 2.45 * q);
+    } else if (a > 0.12) {
+      // The support hand reaches toward the rifle handguard while aiming.
+      const support = THREE.MathUtils.smoothstep(a, 0.12, 0.85);
+      this.rot("LeftArm", -0.72 * support + (moving ? -s * 0.05 * mv : 0), -0.38 * support, 0.42 * support, "YXZ");
+      this.rot("LeftForeArm", -0.55 * support, -0.16 * support, 0.48 * support);
     } else {
-      this.rot("LeftArm", (p.sprint ? 0 : 0.2) * (1 - a), -0.12 * a, -0.08 * a, "YXZ");
-      this.rot("LeftForeArm", 0, -(p.pistol ? 0.35 : 0.75) * a - 0.4 * (1 - a), 0);
+      const armSwing = p.crouch ? 0.08 : p.sprint ? 0.48 : 0.27;
+      this.rot("LeftArm", moving ? -s * armSwing * mv : 0.12 * (1 - a), 0, -0.04, "YXZ");
+      this.rot("LeftForeArm", moving ? -Math.max(0, -s) * 0.18 * mv : 0.08, 0, 0);
     }
 
     // Held crouch is represented by Engine's lowered pivot (0.5 vs 0.9),

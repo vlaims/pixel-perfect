@@ -111,27 +111,66 @@ export class Actor {
 
 function makeGun(kind: WeaponId) {
   const g = new THREE.Group();
-  const m = new THREE.MeshLambertMaterial({ color: "#1d1e22" });
-  const m2 = new THREE.MeshLambertMaterial({ color: "#4a4436" });
-  const box = (w: number, h: number, d: number, x: number, y: number, z: number, mat = m) => {
+  const dark = new THREE.MeshStandardMaterial({ color: "#202329", roughness: 0.62, metalness: 0.62 });
+  const steel = new THREE.MeshStandardMaterial({ color: "#555b62", roughness: 0.38, metalness: 0.82 });
+  const polymer = new THREE.MeshStandardMaterial({ color: "#35332e", roughness: 0.88, metalness: 0.05 });
+  const accent = new THREE.MeshStandardMaterial({ color: "#17191c", roughness: 0.48, metalness: 0.5 });
+  const box = (w: number, h: number, d: number, x: number, y: number, z: number, mat = dark) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    g.add(mesh);
+  };
+  const cyl = (radius: number, len: number, x: number, y: number, z: number, mat = steel) => {
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 10), mat);
+    mesh.rotation.x = Math.PI / 2;
     mesh.position.set(x, y, z);
     mesh.castShadow = true;
     g.add(mesh);
   };
   if (kind === "ar") {
-    box(0.06, 0.1, 0.55, 0, 0, 0.15);
-    box(0.03, 0.03, 0.3, 0, 0.02, 0.55);
-    box(0.05, 0.16, 0.06, 0, -0.1, 0.12, m2);
-    box(0.05, 0.1, 0.2, 0, -0.03, -0.18, m2);
-    box(0.04, 0.12, 0.05, 0, -0.08, -0.02);
+    // Original stylized rifle with stock, receiver, handguard, barrel, magazine,
+    // sights, top rail and small metal controls.
+    box(0.105, 0.115, 0.31, 0, 0, 0.06, dark);
+    box(0.085, 0.075, 0.22, 0, 0.006, 0.31, polymer);
+    box(0.055, 0.055, 0.27, 0, 0.018, 0.53, steel);
+    cyl(0.018, 0.22, 0, 0.018, 0.75, dark);
+    box(0.022, 0.024, 0.035, 0, 0.018, 0.87, steel);
+    box(0.07, 0.075, 0.19, 0, 0.008, -0.18, polymer);
+    box(0.06, 0.13, 0.085, 0, -0.105, -0.005, polymer);
+    box(0.067, 0.18, 0.095, 0, -0.14, 0.16, dark);
+    box(0.11, 0.018, 0.25, 0, 0.065, 0.31, accent);
+    box(0.028, 0.035, 0.035, 0, 0.092, 0.18, steel);
+    box(0.025, 0.06, 0.025, 0, 0.11, 0.51, dark);
+    box(0.075, 0.018, 0.13, 0, 0.069, -0.11, steel);
+    box(0.025, 0.022, 0.11, 0, -0.012, 0.39, accent);
+    for (const side of [-1, 1]) {
+      box(0.012, 0.018, 0.18, side * 0.052, 0.012, 0.32, steel);
+      box(0.012, 0.035, 0.045, side * 0.057, -0.005, 0.12, accent);
+    }
+    for (let i = 0; i < 5; i++) box(0.014, 0.008, 0.018, 0, 0.078, 0.24 + i * 0.045, steel);
   } else {
-    box(0.04, 0.07, 0.2, 0, 0, 0.07);
-    box(0.035, 0.11, 0.05, 0, -0.07, 0);
+    // Original compact sidearm with slide, barrel, grip, trigger guard and sights.
+    box(0.075, 0.075, 0.205, 0, 0.025, 0.075, steel);
+    box(0.062, 0.04, 0.16, 0, 0.065, 0.075, dark);
+    box(0.044, 0.045, 0.055, 0, 0.03, 0.19, accent);
+    cyl(0.012, 0.035, 0, 0.027, 0.2, dark);
+    box(0.052, 0.105, 0.058, 0, -0.055, 0.015, polymer);
+    box(0.044, 0.012, 0.05, 0, -0.11, 0.015, dark);
+    box(0.012, 0.02, 0.06, 0, -0.012, -0.005, steel);
+    box(0.012, 0.02, 0.025, 0, 0.078, 0.01, dark);
+    box(0.016, 0.025, 0.02, 0, 0.082, 0.13, dark);
   }
+  g.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (mesh.isMesh) {
+      mesh.frustumCulled = false;
+      mesh.geometry.computeVertexNormals();
+    }
+  });
   return g;
 }
-
 const UP = new THREE.Vector3(0, 1, 0);
 const tv = new THREE.Vector3();
 const tv2 = new THREE.Vector3();
@@ -1227,7 +1266,7 @@ export class Engine {
       a.root.rotation.y = a.vehicle ? a.vehicle.yaw : a.yaw;
       // Cars fully occlude the seated character to prevent mesh/roof clipping.
       a.rig.holder.visible = !(a.vehicle && a.vehicle.kind === "car");
-      a.phase += dt * (a.moving > 0 ? 8 * (a.input.sprint ? 2.2 : a.crouching ? 0.8 : 1.4) : 0);
+      a.phase += dt * (a.moving > 0 ? 8 * (a.input.sprint ? 2.2 : a.crouching ? 0.8 : 1.4) : 1.1);
       const aimTarget = a.alive && (a.scoping || a.input.shoot || a.cooldown > -0.6) && a.radio < 0.5 ? 1 : 0;
       a.aimBlend += (aimTarget - a.aimBlend) * (1 - Math.exp(-80 * dt));
 
@@ -1281,10 +1320,16 @@ export class Engine {
         g.visible = a.weapon === w && a.alive && !(a.vehicle && a.vehicle.kind === "car");
         if (!g.visible || !hand) continue;
         hand.getWorldPosition(g.position);
-        const gy = a.aimBlend > 0.5 ? a.aimYaw : a.root.rotation.y;
-        const gp = a.aimBlend > 0.5 ? a.aimPitch : -0.6;
-        g.rotation.set(-gp, gy, 0, "YXZ");
-        if (w === "ar") g.position.addScaledVector(tq.setFromEuler(g.rotation) && tv.set(0, 0, 1).applyEuler(g.rotation), -0.05);
+        // Smoothly align the model's +Z barrel with the actor's aim direction.
+        const yawDelta = THREE.MathUtils.euclideanModulo(a.aimYaw - a.root.rotation.y + Math.PI, Math.PI * 2) - Math.PI;
+        const aimYaw = a.root.rotation.y + yawDelta * a.aimBlend;
+        const aimPitch = a.aimPitch * a.aimBlend;
+        g.rotation.set(-aimPitch, aimYaw, 0, "YXZ");
+        const forward = tv.set(0, 0, 1).applyEuler(g.rotation);
+        const right = tv2.set(1, 0, 0).applyEuler(g.rotation);
+        g.position.addScaledVector(forward, w === "ar" ? 0.12 : 0.08);
+        g.position.y -= w === "ar" ? 0.055 : 0.035;
+        g.position.addScaledVector(right, w === "ar" ? 0.025 : 0.018);
       }
       a.flashT -= dt;
       a.flash.visible = a.flashT > 0;
