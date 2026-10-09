@@ -368,7 +368,7 @@ export class Engine {
   }
   onMouse(button: number, down: boolean) {
     if (button === 0) {
-      if (down && !this.mouseL) this.shootEdge = true;
+      if (down && !this.mouseL && this.mouseR) this.shootEdge = true;
       this.mouseL = down;
     }
     if (button === 2) this.mouseR = down;
@@ -693,7 +693,7 @@ export class Engine {
       l: k.has("KeyA") ? 1 : 0,
       r: k.has("KeyD") ? 1 : 0,
       scope: this.mouseR,
-      shoot: this.mouseL,
+      shoot: this.mouseL && this.mouseR,
       shootPressed: this.shootEdge,
       rollPressed: this.rollEdge,
       radio: k.has("KeyQ"),
