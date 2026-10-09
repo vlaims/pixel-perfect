@@ -347,3 +347,17 @@ body { position: fixed; inset: 0; }
   object-fit: fill;
   border: 0;
 }
+
+
+/* Scoped reticle: fixed medium white dot with a crisp black outline. */
+.game-dot.game-dot-scoped {
+  width: 8px !important;
+  height: 8px !important;
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 50%;
+  background: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 0 0 2px #000, 0 0 1px 2px rgba(0,0,0,.65) !important;
+  transform: translate(-50%, -50%);
+}
