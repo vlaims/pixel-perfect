@@ -110,6 +110,20 @@ export function Game() {
   }));
   const [draftError, setDraftError] = useState<string | null>(null);
   const [mouseR, setMouseR] = useState(false);
+  const [lockError, setLockError] = useState<string | null>(null);
+
+  const enterGame = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.focus({ preventScroll: true });
+    try {
+      const request = canvas.requestPointerLock?.();
+      Promise.resolve(request).then(() => setLockError(null)).catch(() => setLockError("Mouse capture was blocked. Click the game again to retry."));
+      engineRef.current?.sfx.resume();
+    } catch {
+      setLockError("Mouse capture was blocked. Click the game again to retry.");
+    }
+  };
 
   const aspect = parseAspect(settings.aspect)?.ratio ?? 16 / 9;
   const stage = computeStageRect(container.w, container.h, aspect, settings.fitMode);
@@ -198,7 +212,7 @@ export function Game() {
     const onMouseMove = (e: MouseEvent) => {
       if (playing()) engine.onLook(e.movementX, e.movementY);
     };
-    const onContextMenu = (e: MouseEvent) => e.preventDefault();
+    const onContextMenu = (e: MouseEvent) => e.preventDefault();\n    const onPointerLockError = () => setLockError("Mouse capture failed. Click the game to try again.");
     const onBlur = () => {
       engine.clearInput();
       setMouseR(false);
@@ -207,7 +221,7 @@ export function Game() {
       if (document.hidden) onBlur();
     };
 
-    document.addEventListener("pointerlockchange", onPointerLockChange);
+    document.addEventListener("pointerlockchange", onPointerLockChange);\n    document.addEventListener("pointerlockerror", onPointerLockError);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -233,7 +247,7 @@ export function Game() {
 
     return () => {
       disposed = true;
-      document.removeEventListener("pointerlockchange", onPointerLockChange);
+      document.removeEventListener("pointerlockchange", onPointerLockChange);\n      document.removeEventListener("pointerlockerror", onPointerLockError);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
@@ -318,6 +332,14 @@ export function Game() {
         style={{ left: stage.x, top: stage.y, width: stage.w, height: stage.h }}
       >
         <canvas ref={canvasRef} className="game-canvas" tabIndex={0} aria-label="Game view" />
+        {!hud.locked && !hud.loading && !hud.settingsOpen && !error && (
+          <button className="game-start-overlay" onClick={enterGame} type="button">
+            <span className="game-start-brand">PIXEL PERFECT</span>
+            <strong>CLICK TO PLAY</strong>
+            <small>WASD MOVE · RMB AIM · SHIFT SPRINT · ESC MENU</small>
+            {lockError && <em role="alert">{lockError}</em>}
+          </button>
+        )}
         <div className="game-ui" style={{ ["--hud-scale" as string]: String(settings.hudScale) }}>
           <div className="game-topbar">
             <span className="game-title">PIXEL PERFECT</span>
