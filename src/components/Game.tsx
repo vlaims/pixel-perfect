@@ -260,7 +260,7 @@ export function Game() {
     engine.sfx.setVolume(s.volume);
     const req = requestedRenderSize(s.fitMode, s.resolution, stage);
     const pr = pixelRatioFor(s.quality, window.devicePixelRatio || 1, s.fitMode === "native");
-    const r = engine.resize(req.w, req.h, pr);
+    const r = engine.resize(req.w, req.h, pr, s.fitMode === "native" ? container.w / Math.max(1, container.h) : aspect);
     hudStore.set({
       display: {
         requestedW: Math.round(req.w * pr),
