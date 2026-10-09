@@ -1,7 +1,9 @@
 import { useSyncExternalStore } from "react";
 import type { WeaponId } from "./config";
+import type { FitMode } from "./display";
 
 export type CrosshairType = "dot" | "cross" | "inverted";
+export type Quality = "low" | "medium" | "high";
 
 export interface Settings {
   crosshair: CrosshairType;
@@ -18,6 +20,23 @@ export interface Settings {
   customHeight: number;
   centerColor: string;
   borderColor: string;
+  fitMode: FitMode;
+  quality: Quality;
+  fov: number;
+  cameraTilt: boolean;
+  hudScale: number;
+  scopeGap: number;
+  scopeLength: number;
+  scopeThickness: number;
+  scopeColor: string;
+}
+
+export interface DisplayInfo {
+  requestedW: number;
+  requestedH: number;
+  actualW: number;
+  actualH: number;
+  error: string | null;
 }
 
 export interface FeedItem {
