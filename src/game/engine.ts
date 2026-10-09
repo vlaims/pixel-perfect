@@ -1299,19 +1299,22 @@ export class Engine {
         // Held C keeps the player in a lowered stance; releasing C restores standing height.
         a.pivot.rotation.set(0, 0, 0);
         a.pivot.position.y = 0.5;
+        a.rig.holder.position.y = -a.pivot.position.y;
         a.rollAngle = 0;
       } else if (a.rolling > 0) {
-        const t = 1 - a.rolling / MOVE.ROLL_TIME;
+        const t = Math.max(0, Math.min(1, 1 - a.rolling / MOVE.ROLL_TIME));
+        // Keep the roll low and grounded: don't add an upward jump/arc. Move the
+        // rig with its pivot so their offsets cancel, preventing the whole model
+        // from being lifted or sunk when the pivot drops for the tumble.
         const rollEase = t * t * (3 - 2 * t);
         a.root.rotation.y = a.rollYaw;
-        // Side-roll the entire character around its forward axis, not just the
-        // pelvis. The head, chest, arms, legs and weapon rig follow one arc.
-        const rollArc = Math.sin(Math.PI * t);
+        a.pivot.position.y = 0.56;
+        a.rig.holder.position.y = -a.pivot.position.y;
         a.pivot.rotation.set(0, 0, rollEase * Math.PI * 2);
-        a.pivot.position.y = 0.48 + rollArc * 0.16;
       } else {
         a.pivot.rotation.set(0, 0, 0);
         a.pivot.position.y = 0.9;
+        a.rig.holder.position.y = -0.9;
         a.rollAngle = 0;
       }
       if (a.vehicle && a.vehicle.kind === "bike") {
