@@ -830,15 +830,19 @@ export class Engine {
     }
     a.moving = Math.hypot(a.velocity.x, a.velocity.z);
 
-    // facing
+    // Third-person camera/body alignment: aiming tracks the camera immediately;
+    // while idle, the character smoothly catches up as the camera orbits.
+    // During locomotion, face travel direction unless actively aiming.
     if (a.rolling <= 0) {
-      let target = a.yaw;
-      const onlyBack = inp.b && !inp.f && !inp.l && !inp.r;
-      if (a.scoping) target = a.aimYaw;
-      else if (onlyBack) target = a.aimYaw;
-      else if (len > 0) target = Math.atan2(dx, dz);
-      if (a.scoping) a.yaw = target;
-      else a.yaw = lerpAngle(a.yaw, target, 1 - Math.exp(-22 * dt));
+      let target = a.aimYaw;
+      if (len > 0 && !a.scoping) target = Math.atan2(dx, dz);
+      if (a.scoping) {
+        a.yaw = lerpAngle(a.yaw, target, 1 - Math.exp(-30 * dt));
+      } else if (len > 0) {
+        a.yaw = lerpAngle(a.yaw, target, 1 - Math.exp(-18 * dt));
+      } else {
+        a.yaw = lerpAngle(a.yaw, a.aimYaw, 1 - Math.exp(-5.5 * dt));
+      }
     }
 
     // translate with step + obstacle checks
