@@ -287,18 +287,10 @@ export class Engine {
   }
 
   async load(modelUrl: string, sounds: Record<string, string>) {
-    const loader = new GLTFLoader();
-    let model: THREE.Object3D;
-
-    // Lovable previews do not always expose project-local asset URLs.
-    // A missing model must not prevent the playable scene from booting.
-    try {
-      const gltf = await loader.loadAsync(modelUrl);
-      model = gltf.scene;
-    } catch (error) {
-      console.warn("Character asset unavailable; using preview mannequin.", error);
-      model = makePreviewMannequin();
-    }
+    // Retire the old imported GLB: it is a static T-pose and its skeleton axes
+    // do not match our procedural animation rig. Use the new articulated model
+    // for the player and every NPC so all characters share the same real poses.
+    const model: THREE.Object3D = makePreviewMannequin();
 
     // Audio is already best-effort in Sfx.load, so these can load independently.
     await Promise.all(Object.entries(sounds).map(([k, u]) => this.sfx.load(k, u)));
@@ -908,9 +900,18 @@ export class Engine {
       if (inp.shootPressed) this.sfx.play("shoot", 0); // dry
       return;
     }
-    this.fire(a, origin, dir, minT);
+    // GTA/FiveM-inspired hitscan: small weapon-specific spread and upward kick.
+    // ADS tightens the cone; repeated automatic shots still have readable recoil.
+    const shotDir = dir.clone();
+    const spread = a.weapon === "ar" ? (a.scoping ? 0.0018 : 0.0075) : (a.scoping ? 0.003 : 0.011);
+    shotDir.x += (Math.random() - 0.5) * spread;
+    shotDir.y += (Math.random() - 0.5) * spread + spread * 0.16;
+    shotDir.z += (Math.random() - 0.5) * spread;
+    shotDir.normalize();
+    this.fire(a, origin, shotDir, minT);
     if (a.isPlayer) {
-      a.recoilOffset = 0.02;
+      a.recoilOffset = Math.min(0.11, a.recoilOffset + (a.weapon === "ar" ? 0.045 : 0.065));
+      this.camPitch = clampCameraPitch(this.camPitch + (a.weapon === "ar" ? 0.006 : 0.011));
     }
   }
 
@@ -1242,6 +1243,14 @@ export class Engine {
       lookTarget.z += Math.cos(yaw) * 3.4 - Math.sin(yaw) * 0.22 * this.shoulder;
       lookTarget.y += Math.sin(pitch) * 0.18;
     }
+    // Subtle movement-linked camera inertia, like a third-person action game.
+    // Reduce bob while aiming; suppress it entirely during a combat roll.
+    const moving = Math.min(1, p.moving / MOVE.RUN);
+    const sway = scoping ? 0.12 : 0.42;
+    const bob = p.rolling > 0 ? 0 : Math.sin(p.phase * 2) * 0.025 * moving * (scoping ? 0.35 : 1);
+    lookTarget.x += Math.cos(yaw) * Math.sin(p.phase * 0.5) * sway * moving * 0.035;
+    lookTarget.z -= Math.sin(yaw) * Math.sin(p.phase * 0.5) * sway * moving * 0.035;
+    lookTarget.y += bob;
     cam.lookAt(lookTarget);
 
     const st = settingsStore.get();
@@ -1291,9 +1300,11 @@ export class Engine {
         const t = 1 - a.rolling / MOVE.ROLL_TIME;
         const rollEase = t * t * (3 - 2 * t);
         a.root.rotation.y = a.rollYaw;
-        a.pivot.rotation.set(rollEase * Math.PI * 2, 0, 0);
-        // Lower the center of mass during the tuck.
-        a.pivot.position.y = 0.58 + Math.sin(rollEase * Math.PI) * 0.12;
+        // Side-roll the entire character around its forward axis, not just the
+        // pelvis. The head, chest, arms, legs and weapon rig follow one arc.
+        const rollArc = Math.sin(Math.PI * t);
+        a.pivot.rotation.set(0, 0, rollEase * Math.PI * 2);
+        a.pivot.position.y = 0.48 + rollArc * 0.16;
       } else {
         a.pivot.rotation.set(0, 0, 0);
         a.pivot.position.y = 0.9;
@@ -1426,81 +1437,91 @@ function angleDiff(a: number, b: number) {
 }
 
 function makePreviewMannequin() {
-  // Procedural articulated fallback. Meshes are parented to named bones so
-  // the same locomotion/aim/roll rig still animates when the GLB is unavailable.
+  // Purpose-built streetwear character inspired by the supplied reference:
+  // fitted light tank, olive cargo pants, dark trainers, warm skin and short hair.
+  // All major body parts are parented to the named animation bones.
   const model = new THREE.Group();
-  const skin = new THREE.MeshLambertMaterial({ color: "#b88f70" });
-  const shirt = new THREE.MeshLambertMaterial({ color: "#d8d0b8" });
-  const pants = new THREE.MeshLambertMaterial({ color: "#62613f" });
-  const shoe = new THREE.MeshLambertMaterial({ color: "#242629" });
-  const dark = new THREE.MeshLambertMaterial({ color: "#43372d" });
-  const seam = new THREE.MeshLambertMaterial({ color: "#8c8660" });
-
+  const mat = (color: string, roughness = 0.82, metalness = 0) =>
+    new THREE.MeshStandardMaterial({ color, roughness, metalness });
+  const skin = mat("#986247"), skinHi = mat("#b67b59");
+  const tank = mat("#d2d0c5"), tankShade = mat("#a7a69c");
+  const pants = mat("#656541"), pantsHi = mat("#7d7b52"), seam = mat("#42452f");
+  const shoe = mat("#1b1c1d"), sole = mat("#3c3b37");
+  const hair = mat("#211811"), hairHi = mat("#302218");
+  const white = mat("#e9e5da", 0.45), eyes = mat("#17120f", 0.4), mouth = mat("#58372a");
+  const belt = mat("#272720"), buckle = mat("#a49a7d", 0.42, 0.35);
   const bone = (name: string, parent: THREE.Object3D, x: number, y: number, z: number) => {
-    const b = new THREE.Bone();
-    b.name = name;
-    b.position.set(x, y, z);
-    parent.add(b);
-    return b;
+    const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z); parent.add(b); return b;
   };
-  const part = (parent: THREE.Object3D, geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) => {
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x, y, z);
-    mesh.scale.set(sx, sy, sz);
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
-    parent.add(mesh);
-    return mesh;
+  const mesh = (parent: THREE.Object3D, geo: THREE.BufferGeometry, material: THREE.Material,
+    x: number, y: number, z: number, sx = 1, sy = 1, sz = 1, rz = 0) => {
+    const o = new THREE.Mesh(geo, material); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.rotation.z = rz;
+    o.castShadow = true; o.receiveShadow = true; parent.add(o); return o;
   };
-  const capsule = (parent: THREE.Object3D, material: THREE.Material, radius: number, length: number, x: number, y: number, z: number) =>
-    part(parent, new THREE.CapsuleGeometry(radius, length, 4, 7), material, x, y, z);
+  const capsule = (parent: THREE.Object3D, material: THREE.Material, radius: number, length: number,
+    x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) =>
+    mesh(parent, new THREE.CapsuleGeometry(radius, length, 5, 10), material, x, y, z, sx, sy, sz);
+  const box = (parent: THREE.Object3D, material: THREE.Material, w: number, h: number, d: number,
+    x: number, y: number, z: number, rz = 0) =>
+    mesh(parent, new THREE.BoxGeometry(w, h, d), material, x, y, z, 1, 1, 1, rz);
 
-  const hips = bone("Hips", model, 0, 0.88, 0);
-  capsule(hips, pants, 0.19, 0.22, 0, -0.03, 0);
-  capsule(hips, seam, 0.195, 0.06, 0, 0.10, 0);
+  const hips = bone("Hips", model, 0, 0.90, 0);
+  capsule(hips, pants, 0.17, 0.19, 0, -0.035, 0, 1.05, 0.8, 0.92);
+  box(hips, belt, 0.34, 0.045, 0.20, 0, 0.075, 0.01);
+  box(hips, buckle, 0.05, 0.035, 0.012, 0, 0.075, 0.115);
+  box(hips, seam, 0.088, 0.13, 0.035, 0.145, -0.20, 0.083);
+  box(hips, seam, 0.088, 0.13, 0.035, -0.145, -0.20, 0.083);
+  box(hips, pantsHi, 0.065, 0.012, 0.01, 0.145, -0.16, 0.104);
+  box(hips, pantsHi, 0.065, 0.012, 0.01, -0.145, -0.16, 0.104);
 
   const spine = bone("Spine", hips, 0, 0.12, 0);
-  capsule(spine, shirt, 0.22, 0.25, 0, 0.08, 0);
-  const spine1 = bone("Spine1", spine, 0, 0.17, 0);
-  capsule(spine1, shirt, 0.235, 0.20, 0, 0.07, 0);
-  const spine2 = bone("Spine2", spine1, 0, 0.16, 0);
-  capsule(spine2, shirt, 0.245, 0.14, 0, 0.04, 0);
-  // Simple shirt panels and collar add shape definition without expensive textures.
-  part(spine2, new THREE.BoxGeometry(0.12, 0.18, 0.018), seam, 0, -0.02, 0.236);
-  const neck = bone("Neck", spine2, 0, 0.13, 0);
-  capsule(neck, skin, 0.075, 0.07, 0, 0.02, 0);
-  const head = bone("Head", neck, 0, 0.11, 0);
-  part(head, new THREE.SphereGeometry(0.145, 12, 10), skin, 0, 0.055, 0);
-  part(head, new THREE.SphereGeometry(0.149, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.47), dark, 0, 0.12, -0.012, 1.01, 0.72, 1.02);
+  mesh(spine, new THREE.CylinderGeometry(0.15, 0.19, 0.34, 16), tank, 0, 0.15, 0, 1, 1, 0.82);
+  const spine1 = bone("Spine1", spine, 0, 0.21, 0);
+  mesh(spine1, new THREE.CylinderGeometry(0.19, 0.205, 0.23, 16), tank, 0, 0.075, 0, 1, 1, 0.82);
+  const spine2 = bone("Spine2", spine1, 0, 0.15, 0);
+  mesh(spine2, new THREE.CylinderGeometry(0.064, 0.075, 0.045, 12), tankShade, 0, 0.16, 0);
+  capsule(spine2, tank, 0.035, 0.15, 0.125, 0.02, 0, 0.78, 1, 0.8);
+  capsule(spine2, tank, 0.035, 0.15, -0.125, 0.02, 0, 0.78, 1, 0.8);
 
-  const leftUp = bone("LeftUpLeg", hips, 0.12, -0.08, 0);
-  capsule(leftUp, pants, 0.105, 0.34, 0, -0.22, 0);
-  const leftLow = bone("LeftLeg", leftUp, 0, -0.43, 0);
-  capsule(leftLow, pants, 0.082, 0.34, 0, -0.18, 0);
-  part(leftLow, new THREE.BoxGeometry(0.14, 0.085, 0.24), shoe, 0, -0.40, 0.055);
-  const rightUp = bone("RightUpLeg", hips, -0.12, -0.08, 0);
-  capsule(rightUp, pants, 0.105, 0.34, 0, -0.22, 0);
-  const rightLow = bone("RightLeg", rightUp, 0, -0.43, 0);
-  capsule(rightLow, pants, 0.082, 0.34, 0, -0.18, 0);
-  part(rightLow, new THREE.BoxGeometry(0.14, 0.085, 0.24), shoe, 0, -0.40, 0.055);
+  const neck = bone("Neck", spine2, 0, 0.17, 0);
+  capsule(neck, skin, 0.055, 0.07, 0, 0.035, 0);
+  const head = bone("Head", neck, 0, 0.10, 0);
+  mesh(head, new THREE.SphereGeometry(0.128, 20, 16), skin, 0, 0.045, 0, 0.92, 1.12, 0.9);
+  mesh(head, new THREE.SphereGeometry(0.088, 16, 12), skin, 0, -0.014, 0.027, 0.86, 0.74, 0.86);
+  mesh(head, new THREE.SphereGeometry(0.133, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.56), hair, 0, 0.102, -0.012, 1.04, 0.78, 1.03);
+  mesh(head, new THREE.SphereGeometry(0.073, 14, 10), hairHi, 0.012, 0.158, 0.038, 1, 0.64, 0.8);
+  for (const side of [-1, 1]) {
+    box(head, hair, 0.042, 0.011, 0.01, side * 0.046, 0.06, 0.105, -side * 0.06);
+    mesh(head, new THREE.SphereGeometry(0.012, 8, 8), white, side * 0.046, 0.038, 0.111, 1, 0.9, 0.7);
+    mesh(head, new THREE.SphereGeometry(0.007, 8, 8), eyes, side * 0.046, 0.038, 0.117, 1, 1, 0.7);
+    mesh(head, new THREE.SphereGeometry(0.022, 10, 8), skinHi, side * 0.126, 0.034, 0, 0.8, 1, 0.8);
+  }
+  mesh(head, new THREE.SphereGeometry(0.015, 10, 8), skinHi, 0, 0.014, 0.118, 0.7, 0.9, 0.7);
+  box(head, mouth, 0.05, 0.007, 0.008, 0, -0.029, 0.108);
 
-  const leftArm = bone("LeftArm", spine2, 0.25, 0.04, 0);
-  capsule(leftArm, skin, 0.072, 0.28, 0.015, -0.19, 0);
-  const leftFore = bone("LeftForeArm", leftArm, 0.01, -0.37, 0);
-  capsule(leftFore, skin, 0.06, 0.28, 0, -0.16, 0);
-  const leftHand = bone("LeftHand", leftFore, 0, -0.32, 0);
-  part(leftHand, new THREE.BoxGeometry(0.09, 0.10, 0.07), skin, 0, -0.015, 0.015);
+  const makeLeg = (name: string, x: number) => {
+    const upper = bone(name, hips, x, -0.11, 0);
+    capsule(upper, pants, 0.085, 0.31, 0, -0.19, 0, 1, 1, 0.93);
+    capsule(upper, pantsHi, 0.086, 0.045, 0, -0.065, 0, 1, 0.55, 0.94);
+    const lower = bone(name === "LeftUpLeg" ? "LeftLeg" : "RightLeg", upper, 0, -0.38, 0);
+    capsule(lower, pants, 0.066, 0.29, 0, -0.155, 0, 1, 1, 0.9);
+    capsule(lower, pantsHi, 0.067, 0.04, 0, -0.045, 0, 1, 0.5, 0.92);
+    capsule(lower, shoe, 0.06, 0.07, 0, -0.33, 0.04, 1.15, 0.55, 1.6);
+    box(lower, sole, 0.135, 0.022, 0.20, 0, -0.375, 0.06);
+  };
+  makeLeg("LeftUpLeg", 0.11);
+  makeLeg("RightUpLeg", -0.11);
 
-  const rightArm = bone("RightArm", spine2, -0.25, 0.04, 0);
-  capsule(rightArm, skin, 0.072, 0.28, -0.015, -0.19, 0);
-  const rightFore = bone("RightForeArm", rightArm, -0.01, -0.37, 0);
-  capsule(rightFore, skin, 0.06, 0.28, 0, -0.16, 0);
-  const rightHand = bone("RightHand", rightFore, 0, -0.32, 0);
-  part(rightHand, new THREE.BoxGeometry(0.09, 0.10, 0.07), skin, 0, -0.015, 0.015);
-
-  model.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (m.isMesh) m.frustumCulled = true;
-  });
+  const makeArm = (name: string, x: number) => {
+    const upper = bone(name, spine2, x, 0.015, 0);
+    capsule(upper, skin, 0.065, 0.25, x > 0 ? 0.008 : -0.008, -0.17, 0, 1, 1.1, 0.94);
+    const lower = bone(name === "LeftArm" ? "LeftForeArm" : "RightForeArm", upper, 0, -0.34, 0);
+    capsule(lower, skin, 0.052, 0.25, 0, -0.14, 0, 1, 1, 0.92);
+    const hand = bone(name === "LeftArm" ? "LeftHand" : "RightHand", lower, 0, -0.28, 0.01);
+    capsule(hand, skinHi, 0.035, 0.045, 0, -0.01, 0.015, 1, 0.8, 0.75);
+  };
+  makeArm("LeftArm", 0.23);
+  makeArm("RightArm", -0.23);
+  model.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; } });
   return model;
 }
