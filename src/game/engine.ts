@@ -696,8 +696,9 @@ export class Engine {
       shootPressed: this.shootEdge,
       rollPressed: this.rollEdge,
       radio: k.has("KeyQ"),
-      sprint: k.has("ShiftLeft") || k.has("ShiftRight"),
-      crouch: k.has("KeyC"),
+      // Sprint only when not aiming, crouching or rolling.
+      sprint: k.has("ShiftLeft") && !this.mouseR && !k.has("ControlLeft") && !(this.player && this.player.rolling > 0),
+      crouch: k.has("ControlLeft"),
     };
     this.shootEdge = false;
     this.rollEdge = false;
@@ -742,8 +743,8 @@ export class Engine {
       dz /= len;
     }
 
-    // FiveM-style combat roll: Space while moving, regardless of ADS state.
-    if (inp.rollPressed && len > 0 && a.rolling <= 0 && a.grounded && a.radio < 0.5) {
+    // Combat roll: Space while aiming (RMB held) and moving.
+    if (inp.rollPressed && inp.scope && len > 0 && a.rolling <= 0 && a.grounded && a.radio < 0.5) {
       a.rolling = MOVE.ROLL_TIME;
       a.rollDir.set(dx, 0, dz);
       a.rollYaw = Math.atan2(a.rollDir.x, a.rollDir.z);
@@ -1135,8 +1136,10 @@ export class Engine {
   updateCamera(dt: number) {
     const p = this.player;
     const cam = this.camera;
-    const yaw = this.camYaw;
-    const pitch = this.camPitch;
+    // V held: look behind (camera only — aim direction is unchanged).
+    const behind = this.keys.has("KeyV") && !this.mouseR;
+    const yaw = this.camYaw + (behind ? Math.PI : 0);
+    const pitch = behind ? Math.min(this.camPitch, 0.2) : this.camPitch;
     const fx = Math.sin(yaw) * Math.cos(pitch);
     const fy = Math.sin(pitch);
     const fz = Math.cos(yaw) * Math.cos(pitch);
@@ -1160,10 +1163,14 @@ export class Engine {
     if (target.y < gh) target.y = gh;
     cam.position.lerp(target, 1 - Math.exp(-30 * dt));
     cam.lookAt(cam.position.x + fx, cam.position.y + fy, cam.position.z + fz);
-    this.cameraTilt += (-this.screenRotationVelocity * 0.2 - this.cameraTilt) * 0.1;
+    const st = settingsStore.get();
+    const tiltTarget = st.cameraTilt ? -this.screenRotationVelocity * 0.2 : 0;
+    this.cameraTilt += (tiltTarget - this.cameraTilt) * 0.1;
     cam.rotation.z = this.cameraTilt;
     this.screenRotationVelocity = THREE.MathUtils.lerp(this.screenRotationVelocity, 0, 0.1);
-    const fov = scoping ? 35 : 65;
+    const baseFov = Number.isFinite(st.fov) && st.fov > 0 ? st.fov : 65;
+    const zoom = this.keys.has("KeyC");
+    const fov = (scoping ? 35 : baseFov) * (zoom ? 0.6 : 1);
     if (Math.abs(cam.fov - fov) > 0.05) {
       cam.fov += (fov - cam.fov) * (1 - Math.exp(-18 * dt));
       cam.updateProjectionMatrix();
