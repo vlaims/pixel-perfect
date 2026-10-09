@@ -66,6 +66,7 @@ export interface HudState {
   scoping: boolean;
   hit: { id: number; head: boolean; zone: "head" | "body" | "legs" } | null;
   feed: FeedItem[];
+  display: DisplayInfo;
 }
 
 function createStore<T extends object>(initial: T) {
@@ -92,11 +93,11 @@ function createStore<T extends object>(initial: T) {
   };
 }
 
-export const settingsStore = createStore<Settings>({
+export const DEFAULT_SETTINGS: Settings = {
   crosshair: "dot",
   gameMode: "vehicle-only",
-  crossSize: 10,
-  outline: 1,
+  crossSize: 8,
+  outline: 0,
   color: "#ffffff",
   sensitivity: 1,
   resolution: { w: 1100, h: 1080 },
@@ -107,7 +108,18 @@ export const settingsStore = createStore<Settings>({
   customHeight: 1080,
   centerColor: "#ffffff",
   borderColor: "#000000",
-});
+  fitMode: "stretch",
+  quality: "medium",
+  fov: 65,
+  cameraTilt: true,
+  hudScale: 1,
+  scopeGap: 5,
+  scopeLength: 9,
+  scopeThickness: 2,
+  scopeColor: "#ffffff",
+};
+
+export const settingsStore = createStore<Settings>({ ...DEFAULT_SETTINGS });
 
 export const hudStore = createStore<HudState>({
   loading: true,
@@ -128,6 +140,13 @@ export const hudStore = createStore<HudState>({
   scoping: false,
   hit: null,
   feed: [],
+  display: {
+    requestedW: 1100,
+    requestedH: 1080,
+    actualW: 1100,
+    actualH: 1080,
+    error: null,
+  },
 });
 
 export function useSettings() {
