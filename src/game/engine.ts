@@ -1381,24 +1381,81 @@ function angleDiff(a: number, b: number) {
 }
 
 function makePreviewMannequin() {
-  const root = new THREE.Group();
-  const skin = new THREE.MeshLambertMaterial({ color: "#b8a18c" });
-  const shirt = new THREE.MeshLambertMaterial({ color: "#46586f" });
-  const pants = new THREE.MeshLambertMaterial({ color: "#24282e" });
+  // Procedural articulated fallback. Meshes are parented to named bones so
+  // the same locomotion/aim/roll rig still animates when the GLB is unavailable.
+  const model = new THREE.Group();
+  const skin = new THREE.MeshLambertMaterial({ color: "#b88f70" });
+  const shirt = new THREE.MeshLambertMaterial({ color: "#d8d0b8" });
+  const pants = new THREE.MeshLambertMaterial({ color: "#62613f" });
+  const shoe = new THREE.MeshLambertMaterial({ color: "#242629" });
+  const dark = new THREE.MeshLambertMaterial({ color: "#43372d" });
+  const seam = new THREE.MeshLambertMaterial({ color: "#8c8660" });
 
-  const part = (g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, sx=1, sy=1, sz=1) => {
-    const mesh = new THREE.Mesh(g, m);
-    mesh.position.set(x,y,z);
-    mesh.scale.set(sx,sy,sz);
-    mesh.castShadow=false;
-    root.add(mesh);
+  const bone = (name: string, parent: THREE.Object3D, x: number, y: number, z: number) => {
+    const b = new THREE.Bone();
+    b.name = name;
+    b.position.set(x, y, z);
+    parent.add(b);
+    return b;
   };
+  const part = (parent: THREE.Object3D, geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) => {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, z);
+    mesh.scale.set(sx, sy, sz);
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    parent.add(mesh);
+    return mesh;
+  };
+  const capsule = (parent: THREE.Object3D, material: THREE.Material, radius: number, length: number, x: number, y: number, z: number) =>
+    part(parent, new THREE.CapsuleGeometry(radius, length, 4, 7), material, x, y, z);
 
-  part(new THREE.CapsuleGeometry(0.23,0.65,5,8), shirt, 0, 1.08, 0);
-  part(new THREE.SphereGeometry(0.22,10,8), skin, 0, 1.72, 0);
-  part(new THREE.CapsuleGeometry(0.10,0.68,4,7), pants, -0.13, 0.55, 0);
-  part(new THREE.CapsuleGeometry(0.10,0.68,4,7), pants, 0.13, 0.55, 0);
-  part(new THREE.CapsuleGeometry(0.07,0.50,4,7), skin, -0.31, 1.12, 0);
-  part(new THREE.CapsuleGeometry(0.07,0.50,4,7), skin, 0.31, 1.12, 0);
-  return root;
+  const hips = bone("Hips", model, 0, 0.88, 0);
+  capsule(hips, pants, 0.19, 0.22, 0, -0.03, 0);
+  capsule(hips, seam, 0.195, 0.06, 0, 0.10, 0);
+
+  const spine = bone("Spine", hips, 0, 0.12, 0);
+  capsule(spine, shirt, 0.22, 0.25, 0, 0.08, 0);
+  const spine1 = bone("Spine1", spine, 0, 0.17, 0);
+  capsule(spine1, shirt, 0.235, 0.20, 0, 0.07, 0);
+  const spine2 = bone("Spine2", spine1, 0, 0.16, 0);
+  capsule(spine2, shirt, 0.245, 0.14, 0, 0.04, 0);
+  // Simple shirt panels and collar add shape definition without expensive textures.
+  part(spine2, new THREE.BoxGeometry(0.12, 0.18, 0.018), seam, 0, -0.02, 0.236);
+  const neck = bone("Neck", spine2, 0, 0.13, 0);
+  capsule(neck, skin, 0.075, 0.07, 0, 0.02, 0);
+  const head = bone("Head", neck, 0, 0.11, 0);
+  part(head, new THREE.SphereGeometry(0.145, 12, 10), skin, 0, 0.055, 0);
+  part(head, new THREE.SphereGeometry(0.149, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.47), dark, 0, 0.12, -0.012, 1.01, 0.72, 1.02);
+
+  const leftUp = bone("LeftUpLeg", hips, 0.12, -0.08, 0);
+  capsule(leftUp, pants, 0.105, 0.34, 0, -0.22, 0);
+  const leftLow = bone("LeftLeg", leftUp, 0, -0.43, 0);
+  capsule(leftLow, pants, 0.082, 0.34, 0, -0.18, 0);
+  part(leftLow, new THREE.BoxGeometry(0.14, 0.085, 0.24), shoe, 0, -0.40, 0.055);
+  const rightUp = bone("RightUpLeg", hips, -0.12, -0.08, 0);
+  capsule(rightUp, pants, 0.105, 0.34, 0, -0.22, 0);
+  const rightLow = bone("RightLeg", rightUp, 0, -0.43, 0);
+  capsule(rightLow, pants, 0.082, 0.34, 0, -0.18, 0);
+  part(rightLow, new THREE.BoxGeometry(0.14, 0.085, 0.24), shoe, 0, -0.40, 0.055);
+
+  const leftArm = bone("LeftArm", spine2, 0.25, 0.04, 0);
+  capsule(leftArm, skin, 0.072, 0.28, 0.015, -0.19, 0);
+  const leftFore = bone("LeftForeArm", leftArm, 0.01, -0.37, 0);
+  capsule(leftFore, skin, 0.06, 0.28, 0, -0.16, 0);
+  const leftHand = bone("LeftHand", leftFore, 0, -0.32, 0);
+  part(leftHand, new THREE.BoxGeometry(0.09, 0.10, 0.07), skin, 0, -0.015, 0.015);
+
+  const rightArm = bone("RightArm", spine2, -0.25, 0.04, 0);
+  capsule(rightArm, skin, 0.072, 0.28, -0.015, -0.19, 0);
+  const rightFore = bone("RightForeArm", rightArm, -0.01, -0.37, 0);
+  capsule(rightFore, skin, 0.06, 0.28, 0, -0.16, 0);
+  const rightHand = bone("RightHand", rightFore, 0, -0.32, 0);
+  part(rightHand, new THREE.BoxGeometry(0.09, 0.10, 0.07), skin, 0, -0.015, 0.015);
+
+  model.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh) m.frustumCulled = true;
+  });
+  return model;
 }
