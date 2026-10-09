@@ -235,3 +235,22 @@
 /* Final crosshair + held crouch presentation */
 .game-crosshair.dot{width:var(--crosshair-dot-size)!important;height:var(--crosshair-dot-size)!important;border:0!important;border-radius:50%!important;}
 .game-crosshair.dot span{width:100%!important;height:100%!important;background:#fff!important;border-radius:50%!important;box-shadow:0 0 0 2px #000!important;}
+
+/* Shared game rectangle: canvas, HUD and crosshair all live inside it */
+.game-stage{position:absolute;overflow:hidden}
+.game-stage .game-canvas{position:absolute;inset:0;width:100%;height:100%}
+.game-stage .game-ui{position:absolute;inset:0;transform:none}
+.game-dot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:9996}
+.game-scope{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:9996}
+.game-scope.preview{position:relative;left:auto;top:auto;display:inline-block;width:40px;height:40px}
+.game-scope i{position:absolute;background:currentColor}
+.game-scope.preview i{margin:20px 0 0 20px}
+.game-scope .u,.game-scope .d{width:var(--t);height:var(--l);left:calc(var(--t) / -2)}
+.game-scope .l,.game-scope .r{height:var(--t);width:var(--l);top:calc(var(--t) / -2)}
+.game-scope .u{bottom:var(--g)}.game-scope .d{top:var(--g)}
+.game-scope .l{right:var(--g)}.game-scope .r{left:var(--g)}
+.game-scope.preview .u{bottom:auto;top:calc(-1 * (var(--g) + var(--l)))}.game-scope.preview .l{right:auto;left:calc(-1 * (var(--g) + var(--l)))}
+.game-hud,.game-topbar,.game-fps{zoom:var(--hud-scale,1)}
+.settings-error{color:#ff8a8a;font-size:12px}
+.settings-keys{display:grid;gap:4px;margin:0}.settings-keys div{display:flex;justify-content:space-between;gap:12px}.settings-keys dt{font-weight:700}.settings-keys dd{margin:0;opacity:.8}
+.game-settings input[type=text]{background:#16181d;color:#fff;border:1px solid #444;padding:4px;width:100px}

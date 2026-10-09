@@ -309,13 +309,45 @@ export class Engine {
     void this.sfx.ctx.close();
   }
 
-  resize(w: number, h: number, pr: number) {
-    this.width = w;
-    this.height = h;
-    this.renderer.setPixelRatio(Math.min(pr, 1.25));
-    this.renderer.setSize(w, h, false);
-    this.camera.aspect = w / h;
+  lastGood: { w: number; h: number; pr: number } | null = null;
+
+  /**
+   * Resize the drawing buffer. Returns the actual buffer size, or an error if the
+   * WebGL allocation failed (in which case the last working size is restored).
+   */
+  resize(w: number, h: number, pr: number): { ok: boolean; actualW: number; actualH: number; error?: string } {
+    const gl = this.renderer.getContext();
+    const apply = (ww: number, hh: number, rr: number) => {
+      this.renderer.setPixelRatio(rr);
+      this.renderer.setSize(ww, hh, false);
+      this.post?.setSize?.(Math.round(ww * rr), Math.round(hh * rr));
+    };
+    const want = { w: Math.round(w * pr), h: Math.round(h * pr) };
+    let error: string | undefined;
+    try {
+      apply(w, h, pr);
+      const err = gl.getError();
+      const buf = this.renderer.domElement;
+      if (err === gl.OUT_OF_MEMORY || gl.isContextLost()) error = "WebGL could not allocate this resolution";
+      else if (buf.width !== want.w || buf.height !== want.h) {
+        const max = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
+        if (want.w > max || want.h > max) error = `GPU limit is ${max}px per side`;
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Resize failed";
+    }
+    if (error && this.lastGood) {
+      try { apply(this.lastGood.w, this.lastGood.h, this.lastGood.pr); } catch {}
+    } else if (!error) {
+      this.lastGood = { w, h, pr };
+    }
+    const cur = this.lastGood ?? { w, h };
+    this.width = cur.w;
+    this.height = cur.h;
+    this.camera.aspect = cur.w / cur.h;
     this.camera.updateProjectionMatrix();
+    const buf = this.renderer.domElement;
+    return { ok: !error, actualW: buf.width, actualH: buf.height, error };
   }
 
   // ---------- input ----------
@@ -325,12 +357,12 @@ export class Engine {
       this.keys.add(code);
       const p = this.player;
       if (!p || !p.alive) return;
-      if (code === "Digit1" && !p.vehicle) this.switchWeapon(p, "ar");
-      if (code === "Digit2") this.switchWeapon(p, "pistol");
+      if (code === "Digit1") this.switchWeapon(p, "pistol");
+      if (code === "Digit2" && !p.vehicle) this.switchWeapon(p, "ar");
       if (code === "KeyR") this.reload(p);
       if (code === "KeyE") this.toggleVehicle(p);
-      if (code === "Space") this.rollEdge = true;
-      if (code === "KeyT" && this.mouseR) this.shoulder *= -1;
+      if (code === "Space" && this.mouseR) this.rollEdge = true;
+      if (code === "KeyT") this.shoulder *= -1;
     } else this.keys.delete(code);
   }
   onMouse(button: number, down: boolean) {
@@ -349,6 +381,7 @@ export class Engine {
   clearInput() {
     this.keys.clear();
     this.mouseL = this.mouseR = false;
+    this.shootEdge = this.rollEdge = false;
   }
 
   // ---------- actions ----------
@@ -663,8 +696,9 @@ export class Engine {
       shootPressed: this.shootEdge,
       rollPressed: this.rollEdge,
       radio: k.has("KeyQ"),
-      sprint: k.has("ShiftLeft") || k.has("ShiftRight"),
-      crouch: k.has("KeyC"),
+      // Sprint only when not aiming, crouching or rolling.
+      sprint: k.has("ShiftLeft") && !this.mouseR && !k.has("ControlLeft") && !(this.player && this.player.rolling > 0),
+      crouch: k.has("ControlLeft"),
     };
     this.shootEdge = false;
     this.rollEdge = false;
@@ -709,8 +743,8 @@ export class Engine {
       dz /= len;
     }
 
-    // FiveM-style combat roll: Space while moving, regardless of ADS state.
-    if (inp.rollPressed && len > 0 && a.rolling <= 0 && a.grounded && a.radio < 0.5) {
+    // Combat roll: Space while aiming (RMB held) and moving.
+    if (inp.rollPressed && inp.scope && len > 0 && a.rolling <= 0 && a.grounded && a.radio < 0.5) {
       a.rolling = MOVE.ROLL_TIME;
       a.rollDir.set(dx, 0, dz);
       a.rollYaw = Math.atan2(a.rollDir.x, a.rollDir.z);
@@ -1102,8 +1136,10 @@ export class Engine {
   updateCamera(dt: number) {
     const p = this.player;
     const cam = this.camera;
-    const yaw = this.camYaw;
-    const pitch = this.camPitch;
+    // V held: look behind (camera only — aim direction is unchanged).
+    const behind = this.keys.has("KeyV") && !this.mouseR;
+    const yaw = this.camYaw + (behind ? Math.PI : 0);
+    const pitch = behind ? Math.min(this.camPitch, 0.2) : this.camPitch;
     const fx = Math.sin(yaw) * Math.cos(pitch);
     const fy = Math.sin(pitch);
     const fz = Math.cos(yaw) * Math.cos(pitch);
@@ -1127,10 +1163,14 @@ export class Engine {
     if (target.y < gh) target.y = gh;
     cam.position.lerp(target, 1 - Math.exp(-30 * dt));
     cam.lookAt(cam.position.x + fx, cam.position.y + fy, cam.position.z + fz);
-    this.cameraTilt += (-this.screenRotationVelocity * 0.2 - this.cameraTilt) * 0.1;
+    const st = settingsStore.get();
+    const tiltTarget = st.cameraTilt ? -this.screenRotationVelocity * 0.2 : 0;
+    this.cameraTilt += (tiltTarget - this.cameraTilt) * 0.1;
     cam.rotation.z = this.cameraTilt;
     this.screenRotationVelocity = THREE.MathUtils.lerp(this.screenRotationVelocity, 0, 0.1);
-    const fov = scoping ? 35 : 65;
+    const baseFov = Number.isFinite(st.fov) && st.fov > 0 ? st.fov : 65;
+    const zoom = this.keys.has("KeyC");
+    const fov = (scoping ? 35 : baseFov) * (zoom ? 0.6 : 1);
     if (Math.abs(cam.fov - fov) > 0.05) {
       cam.fov += (fov - cam.fov) * (1 - Math.exp(-18 * dt));
       cam.updateProjectionMatrix();
