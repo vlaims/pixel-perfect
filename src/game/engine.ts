@@ -160,7 +160,7 @@ export class Engine {
   glassShards: THREE.Mesh[] = [];
   player!: Actor;
   camYaw = 0;
-  camPitch = 0;
+  camPitch = -0.24;
   screenRotationVelocity = 0;
   cameraTilt = 0;
   shoulder = 1;
@@ -295,6 +295,9 @@ export class Engine {
       }
     }
     this.camYaw = 0;
+    this.camPitch = -0.24;
+    this.camera.position.set(0, 3.2, -9);
+    this.camera.lookAt(0, 1.4, -6);
     hudStore.set({ loading: false });
   }
 
@@ -787,7 +790,7 @@ export class Engine {
       // Match the supplied controller's input-latency feel: velocity eases toward
       // the target instead of snapping instantly every frame.
       const targetVelocity = tv.set(vx, 0, vz);
-      a.velocity.lerp(targetVelocity, 0.15);
+      a.velocity.lerp(targetVelocity, 1 - Math.exp(-(len > 0 ? (inp.sprint ? 12 : inp.scope ? 16 : 14) : 20) * dt));
       vx = a.velocity.x;
       vz = a.velocity.z;
     } else {
@@ -1137,46 +1140,87 @@ export class Engine {
   updateCamera(dt: number) {
     const p = this.player;
     const cam = this.camera;
-    // V held: look behind (camera only — aim direction is unchanged).
+    if (!p) return;
+
+    // Orbit camera: the pivot is the upper torso, never the feet. Negative
+    // pitch places the camera above the pivot and looks down over the shoulder.
     const behind = this.keys.has("KeyV") && !this.mouseR;
     const yaw = this.camYaw + (behind ? Math.PI : 0);
-    const pitch = behind ? Math.min(this.camPitch, 0.2) : this.camPitch;
-    const fx = Math.sin(yaw) * Math.cos(pitch);
+    const pitch = THREE.MathUtils.clamp(this.camPitch, -0.72, 0.16);
+    const cp = Math.cos(pitch);
+    const fx = Math.sin(yaw) * cp;
     const fy = Math.sin(pitch);
-    const fz = Math.cos(yaw) * Math.cos(pitch);
+    const fz = Math.cos(yaw) * cp;
     const rx = -Math.cos(yaw);
     const rz = Math.sin(yaw);
+    const scoping = this.mouseR && p.alive;
     let pivot: THREE.Vector3;
     let back: number;
     let side: number;
-    const scoping = this.mouseR && p.alive;
+
     if (p.vehicle) {
-      pivot = tv.set(p.vehicle.pos.x, p.vehicle.pos.y + (p.vehicle.kind === "car" ? 2.0 : 1.7), p.vehicle.pos.z);
-      back = scoping ? p.vehicle.cfg.camBack * 0.7 : p.vehicle.cfg.camBack;
-      side = scoping ? 0.6 * this.shoulder : 0;
+      pivot = tv.set(p.vehicle.pos.x, p.vehicle.pos.y + (p.vehicle.kind === "car" ? 1.85 : 1.55), p.vehicle.pos.z);
+      back = scoping ? p.vehicle.cfg.camBack * 0.78 : p.vehicle.cfg.camBack;
+      side = scoping ? 0.48 * this.shoulder : 0;
     } else {
-      pivot = tv.set(p.vis.x, p.vis.y + (p.rolling > 0 ? 1.2 : p.crouching ? 0.5 : 0.9) + p.recoilOffset, p.vis.z);
-      back = scoping ? 1.5 : 3.0;
-      side = (scoping ? 0.55 : 0.5) * this.shoulder;
+      const pivotHeight = p.rolling > 0 ? 1.0 : p.crouching ? 1.08 : 1.48;
+      pivot = tv.set(p.vis.x, p.vis.y + pivotHeight + p.recoilOffset, p.vis.z);
+      back = scoping ? 2.15 : (this.keys.has("KeyC") ? 1.8 : 3.8);
+      side = (scoping ? 0.62 : 0.42) * this.shoulder;
     }
-    const target = tv2.set(pivot.x - fx * back + rx * side, pivot.y - fy * back + 0.15, pivot.z - fz * back + rz * side);
-    const gh = heightAt(target.x, target.z) + 0.3;
-    if (target.y < gh) target.y = gh;
-    cam.position.lerp(target, 1 - Math.exp(-30 * dt));
-    cam.lookAt(cam.position.x + fx, cam.position.y + fy, cam.position.z + fz);
+
+    const desired = tv2.set(
+      pivot.x - fx * back + rx * side,
+      pivot.y - fy * back + 0.12,
+      pivot.z - fz * back + rz * side,
+    );
+
+    // Camera collision: keep the camera above terrain and pull it forward when
+    // a wall/building intersects the line between the pivot and desired point.
+    let safeT = 1;
+    for (let i = 1; i <= 12; i++) {
+      const t = i / 12;
+      const x = THREE.MathUtils.lerp(pivot.x, desired.x, t);
+      const y = THREE.MathUtils.lerp(pivot.y, desired.y, t);
+      const z = THREE.MathUtils.lerp(pivot.z, desired.z, t);
+      if (y < heightAt(x, z) + 0.78) {
+        safeT = Math.min(safeT, Math.max(0.18, t - 0.09));
+        break;
+      }
+      for (const b of this.boxes) {
+        if (x > b.minX - 0.18 && x < b.maxX + 0.18 &&
+            z > b.minZ - 0.18 && z < b.maxZ + 0.18 &&
+            y > b.y0 + 0.1 && y < b.y1 + 0.2) {
+          safeT = Math.min(safeT, Math.max(0.16, t - 0.10));
+          break;
+        }
+      }
+      if (safeT < 1) break;
+    }
+    desired.lerp(pivot, 1 - safeT);
+    desired.y = Math.max(heightAt(desired.x, desired.z) + 0.82, desired.y);
+
+    const follow = 1 - Math.exp(-(scoping ? 22 : 15) * Math.max(0, dt));
+    cam.position.lerp(desired, follow);
+    // Look directly at the upper-body pivot so yaw/pitch and movement agree.
+    cam.lookAt(pivot);
+
     const st = settingsStore.get();
-    const tiltTarget = st.cameraTilt ? -this.screenRotationVelocity * 0.2 : 0;
-    this.cameraTilt += (tiltTarget - this.cameraTilt) * 0.1;
-    cam.rotation.z = this.cameraTilt;
-    this.screenRotationVelocity = THREE.MathUtils.lerp(this.screenRotationVelocity, 0, 0.1);
+    const tiltTarget = st.cameraTilt && !scoping && p.rolling <= 0
+      ? THREE.MathUtils.clamp(-this.screenRotationVelocity * 0.10, -0.035, 0.035)
+      : 0;
+    this.cameraTilt += (tiltTarget - this.cameraTilt) * (1 - Math.exp(-8 * dt));
+    cam.rotateZ(this.cameraTilt);
+    this.screenRotationVelocity = THREE.MathUtils.lerp(this.screenRotationVelocity, 0, 1 - Math.exp(-7 * dt));
+
     const baseFov = Number.isFinite(st.fov) && st.fov > 0 ? st.fov : 65;
     const zoom = this.keys.has("KeyC");
-    const fov = (scoping ? 35 : baseFov) * (zoom ? 0.6 : 1);
-    if (Math.abs(cam.fov - fov) > 0.05) {
-      cam.fov += (fov - cam.fov) * (1 - Math.exp(-18 * dt));
+    const fov = (scoping ? 35 : baseFov) * (zoom ? 0.72 : 1);
+    if (Math.abs(cam.fov - fov) > 0.025) {
+      cam.fov += (fov - cam.fov) * (1 - Math.exp(-14 * dt));
       cam.updateProjectionMatrix();
     }
-    // sun follows player
+
     this.sun.position.set(p.pos.x + 30, p.pos.y + 60, p.pos.z + 20);
     this.sun.target.position.set(p.pos.x, p.pos.y, p.pos.z);
   }
