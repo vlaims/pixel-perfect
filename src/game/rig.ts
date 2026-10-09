@@ -104,7 +104,7 @@ export class Rig {
     const mv = Math.min(1, Math.max(0, p.move));
     const moving = mv > 0.01;
     const a = p.aim;
-    const roll = Math.max(0, Math.min(1, p.roll));
+    const roll = Math.max(0, Math.min(1, p.roll));\n    const idle = moving || p.dead || p.seated > 0.5 || roll > 0 ? 0 : Math.sin(p.phase * 0.7);
 
     // Roll keeps the existing full-body tuck/rotation used by Pixel Perfect.
     if (roll > 0.001) {
