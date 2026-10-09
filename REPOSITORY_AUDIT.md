@@ -50,3 +50,22 @@ The source edits are committed to the connected GitHub repository. A full `npm r
 - Test performance on a real Chromebook; tune draw calls, shadow settings, AI count and render scale from measurements.
 - Re-host the GLB/audio assets for any deployment that does not preserve Lovable's asset endpoints.
 - Further requested work—such as vehicle damage zones, detailed traffic routing/streaming, extensive key rebinding and more advanced AI—should be separately implemented and tested rather than assumed complete.
+
+## Corrective playable-game rebuild — 2026-10-09
+
+Following the reported full-screen, mouse-look, camera-clipping and player-model failures, the following systems were revised:
+
+- `src/styles.css`: fixed the document/root/game shell to the full dynamic viewport, removed page scroll/margins, and added a full-screen click-to-play overlay.
+- `src/components/Game.tsx`: added explicit pointer-lock failure handling, focus-before-lock, a visible retry path, and cleanup for the pointer-lock error listener. The start overlay requests pointer lock on the canvas after a user gesture.
+- `src/game/cameraMath.ts`: added testable orbit math, finite-input fallbacks, pitch limits and frame-rate-independent follow interpolation.
+- `src/game/engine.ts`: rebuilt the third-person camera around the upper-body pivot, added terrain/building camera collision checks and minimum ground clearance, clamped pitch at input, and made movement acceleration/deceleration smoothing frame-rate independent.
+- `src/game/rig.ts`: differentiated walk/sprint/crouch/aim gait and added layered torso/head lean.
+- `src/game/engine.ts` procedural fallback: replaced the static mannequin with a named-bone articulated character so existing rig poses continue working when the hosted GLB fails.
+- `src/game/world.ts`: brightened the urban facade palette and replaced round tree crowns with low-poly instanced palm fronds to better match the supplied sunny city reference.
+- `src/test/cameraMath.test.ts`: added tests for pitch clamps, behind/above orbit placement, invalid numeric inputs and smoothing behavior.
+- `.github/workflows/ci.yml`: added a reproducible Bun-lockfile-based check pipeline.
+
+### Verification for the corrected game source
+
+GitHub Actions run [37901216938](https://github.com/vlaims/pixel-perfect/actions/runs/37901216938) installed dependencies, passed the test suite and passed the production build. The lint step still fails on existing formatting and `@typescript-eslint/ban-ts-comment` debt, so the repository is not yet lint-clean. Browser interaction and Chromebook frame-rate testing remain unverified; the game should be manually tested in the published preview after deployment finishes.
+
