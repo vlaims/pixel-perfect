@@ -88,7 +88,18 @@ export class Rig {
     if (!d) return;
     te.set(x, y, z, order);
     tq.setFromEuler(te);
-    d.bone.quaternion.copy(d.rest).multiply(d.wInv).multiply(tq).multiply(d.w);
+
+    // Express the procedural delta in model/world space, then convert it back
+    // into the current parent-local frame. The previous rest * inverse-world
+    // multiplication could cancel the pose on imported GLTF rigs, leaving arms
+    // frozen or twisting unpredictably instead of reaching the weapon.
+    d.bone.parent?.updateWorldMatrix(true, false);
+    const parentWorld = new THREE.Quaternion();
+    d.bone.parent?.getWorldQuaternion(parentWorld);
+    const desiredWorld = tq.clone().multiply(d.w);
+    d.bone.quaternion.copy(parentWorld.invert().multiply(desiredWorld));
+    d.bone.updateMatrix();
+    d.bone.updateWorldMatrix(false, true);
   }
 
   getBone(name: BoneName) {
@@ -155,23 +166,26 @@ export class Rig {
     this.rot("Spine2", -p.pitch * 0.62 * a, 0, lateralLean * 0.35);
     this.rot("Head", -p.pitch * 0.3 - forwardLean * 0.45 + idle * 0.012, idle * 0.018, -lateralLean * 0.6 - idle * 0.012);
 
-    // Blend from a relaxed low-ready stance into a stable firing pose.
-    this.rot("RightArm", 0.8 - 0.95 * a + (moving && a < 0.4 ? -s * 0.1 * mv : 0), 0.12 * a, -0.3 + 0.08 * a, "YXZ");
-    this.rot("RightForeArm", -0.12 * a, 0.18 * (1 - a) + 0.12 * a, 0.04 * a);
+    // Raise the right arm into the grip instead of leaving the upper arm
+    // close to its rest pose; bend the elbow to keep the muzzle off the floor.
+    const aimArm = THREE.MathUtils.smoothstep(a, 0.05, 0.95);
+    const relaxedSwing = moving && !p.sprint ? -s * 0.12 * mv : 0;
+    this.rot("RightArm", 0.42 * (1 - aimArm) - 1.02 * aimArm + relaxedSwing, 0.10 * aimArm, -0.22 + 0.12 * aimArm, "YXZ");
+    this.rot("RightForeArm", 0.10 * (1 - aimArm) - 0.42 * aimArm, 0.12 * aimArm, 0.03, "YXZ");
 
     if (p.radio > 0.01) {
       const q = p.radio;
-      this.rot("LeftArm", -0.15, -0.45 * q, -0.2 * q, "YXZ");
-      this.rot("LeftForeArm", 0.05, -0.2 * q, 2.45 * q);
-    } else if (a > 0.12) {
-      // The support hand reaches toward the rifle handguard while aiming.
-      const support = THREE.MathUtils.smoothstep(a, 0.12, 0.85);
-      this.rot("LeftArm", -0.72 * support + (moving ? -s * 0.05 * mv : 0), -0.38 * support, 0.42 * support, "YXZ");
-      this.rot("LeftForeArm", -0.55 * support, -0.16 * support, 0.48 * support);
+      this.rot("LeftArm", 0.18 - 0.25 * q, -0.35 * q, -0.12 * q, "YXZ");
+      this.rot("LeftForeArm", 0.18, -0.18 * q, 1.9 * q);
+    } else if (aimArm > 0.08) {
+      // Bring the support elbow forward and bend it inward toward the handguard.
+      const support = THREE.MathUtils.smoothstep(aimArm, 0.08, 0.88);
+      this.rot("LeftArm", -0.88 * support + (moving ? -s * 0.045 * mv : 0), -0.30 * support, 0.34 * support, "YXZ");
+      this.rot("LeftForeArm", -0.62 * support, -0.10 * support, 0.42 * support, "YXZ");
     } else {
-      const armSwing = p.crouch ? 0.08 : p.sprint ? 0.48 : 0.27;
-      this.rot("LeftArm", moving ? -s * armSwing * mv : 0.12 * (1 - a), 0, -0.04, "YXZ");
-      this.rot("LeftForeArm", moving ? -Math.max(0, -s) * 0.18 * mv : 0.08, 0, 0);
+      const armSwing = p.crouch ? 0.08 : p.sprint ? 0.34 : 0.22;
+      this.rot("LeftArm", moving ? -s * armSwing * mv : 0.16, 0, -0.04, "YXZ");
+      this.rot("LeftForeArm", moving ? -Math.max(0, -s) * 0.12 * mv : 0.12, 0, 0, "YXZ");
     }
 
     // Held crouch is represented by Engine's lowered pivot (0.5 vs 0.9),
