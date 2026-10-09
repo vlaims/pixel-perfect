@@ -34,9 +34,9 @@ export class Vehicle {
     const paint = new THREE.MeshLambertMaterial({ color });
     const paintDark = new THREE.MeshLambertMaterial({ color: "#242629" });
     const tire = new THREE.MeshLambertMaterial({ color: "#17191c" });
-    const glass = new THREE.MeshLambertMaterial({ color: "#253844" });
-    const trim = new THREE.MeshLambertMaterial({ color: "#6a6d6f" });
-    const light = new THREE.MeshBasicMaterial({ color: "#e7dfba" });
+    const glass = new THREE.MeshLambertMaterial({ color: "#43849a" });
+    const trim = new THREE.MeshLambertMaterial({ color: "#858783" });
+    const light = new THREE.MeshBasicMaterial({ color: "#fff0b5" });
     const tail = new THREE.MeshBasicMaterial({ color: "#8d2b2d" });
     const indicator = new THREE.MeshBasicMaterial({ color: "#d79b45" });
     const plate = new THREE.MeshBasicMaterial({ color: "#d4d0c0" });
