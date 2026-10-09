@@ -101,24 +101,26 @@ export function buildWorld(scene: THREE.Scene) {
 
 
   // ----- Palette -----
-  const base = new THREE.MeshLambertMaterial({ color: "#8b9b79" });
-  const asphalt = new THREE.MeshLambertMaterial({ color: "#26282c" });
-  const asphaltPatch = new THREE.MeshLambertMaterial({ color: "#303237" });
-  const sidewalk = new THREE.MeshLambertMaterial({ color: "#c3b9a2" });
-  const curb = new THREE.MeshLambertMaterial({ color: "#e1d7c2" });
-  const white = new THREE.MeshBasicMaterial({ color: "#ece9dc" });
-  const yellow = new THREE.MeshBasicMaterial({ color: "#d2b04b" });
-  const concrete = new THREE.MeshLambertMaterial({ color: "#6a6d70" });
-  const darkConcrete = new THREE.MeshLambertMaterial({ color: "#3b3e42" });
-  const glass = new THREE.MeshLambertMaterial({ color: "#4f8797" });
-  const glassLight = new THREE.MeshLambertMaterial({ color: "#91bdc5" });
-  const windowWarm = new THREE.MeshBasicMaterial({ color: "#b79a69" });
-  const roof = new THREE.MeshLambertMaterial({ color: "#3a3b3c" });
-  const brick = new THREE.MeshLambertMaterial({ color: "#bd6652" });
-  const plaster = new THREE.MeshLambertMaterial({ color: "#e2bba0" });
-  const stucco = new THREE.MeshLambertMaterial({ color: "#78a9a1" });
-  const treeGreen = new THREE.MeshLambertMaterial({ color: "#347e45" });
-  const treeDark = new THREE.MeshLambertMaterial({ color: "#245d38" });
+  // Bright illustrated low-poly street palette inspired by the supplied
+  // sunny, palm-lined urban reference.
+  const base = new THREE.MeshLambertMaterial({ color: "#93a77d" });
+  const asphalt = new THREE.MeshLambertMaterial({ color: "#303238" });
+  const asphaltPatch = new THREE.MeshLambertMaterial({ color: "#393a3e" });
+  const sidewalk = new THREE.MeshLambertMaterial({ color: "#d7b99e" });
+  const curb = new THREE.MeshLambertMaterial({ color: "#ead9bd" });
+  const white = new THREE.MeshBasicMaterial({ color: "#fff5df" });
+  const yellow = new THREE.MeshBasicMaterial({ color: "#f3c72f" });
+  const concrete = new THREE.MeshLambertMaterial({ color: "#85817a" });
+  const darkConcrete = new THREE.MeshLambertMaterial({ color: "#4b4a49" });
+  const glass = new THREE.MeshLambertMaterial({ color: "#5ba8c4" });
+  const glassLight = new THREE.MeshLambertMaterial({ color: "#9adced" });
+  const windowWarm = new THREE.MeshBasicMaterial({ color: "#f5c783" });
+  const roof = new THREE.MeshLambertMaterial({ color: "#454447" });
+  const brick = new THREE.MeshLambertMaterial({ color: "#d86e58" });
+  const plaster = new THREE.MeshLambertMaterial({ color: "#f0c2a0" });
+  const stucco = new THREE.MeshLambertMaterial({ color: "#69bdb4" });
+  const treeGreen = new THREE.MeshLambertMaterial({ color: "#299b58" });
+  const treeDark = new THREE.MeshLambertMaterial({ color: "#176b43" });
   const trunk = new THREE.MeshLambertMaterial({ color: "#795238" });
   const lamp = new THREE.MeshBasicMaterial({ color: "#ffe2a1" });
   const red = new THREE.MeshBasicMaterial({ color: "#b52d2d" });
