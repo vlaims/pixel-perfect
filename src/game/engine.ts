@@ -8,6 +8,7 @@ import { Vehicle } from "./vehicles";
 import { Sfx } from "./audio";
 import { hudStore, settingsStore } from "./store";
 import { loadBloodFxDat, selectBloodFx, type BloodFxConfig } from "./bloodfx";
+import { cameraFollowFactor, clampCameraPitch, orbitCameraPosition, CAMERA_GROUND_CLEARANCE } from "./cameraMath";
 
 export interface Input {
   f: number;
@@ -1146,7 +1147,7 @@ export class Engine {
     // pitch places the camera above the pivot and looks down over the shoulder.
     const behind = this.keys.has("KeyV") && !this.mouseR;
     const yaw = this.camYaw + (behind ? Math.PI : 0);
-    const pitch = THREE.MathUtils.clamp(this.camPitch, -0.72, 0.16);
+    const pitch = clampCameraPitch(this.camPitch);
     const cp = Math.cos(pitch);
     const fx = Math.sin(yaw) * cp;
     const fy = Math.sin(pitch);
@@ -1169,11 +1170,8 @@ export class Engine {
       side = (scoping ? 0.62 : 0.42) * this.shoulder;
     }
 
-    const desired = tv2.set(
-      pivot.x - fx * back + rx * side,
-      pivot.y - fy * back + 0.12,
-      pivot.z - fz * back + rz * side,
-    );
+    const orbit = orbitCameraPosition(pivot, yaw, pitch, back, side, 0.12);
+    const desired = tv2.set(orbit.x, orbit.y, orbit.z);
 
     // Camera collision: keep the camera above terrain and pull it forward when
     // a wall/building intersects the line between the pivot and desired point.
@@ -1183,7 +1181,7 @@ export class Engine {
       const x = THREE.MathUtils.lerp(pivot.x, desired.x, t);
       const y = THREE.MathUtils.lerp(pivot.y, desired.y, t);
       const z = THREE.MathUtils.lerp(pivot.z, desired.z, t);
-      if (y < heightAt(x, z) + 0.78) {
+      if (y < heightAt(x, z) + CAMERA_GROUND_CLEARANCE) {
         safeT = Math.min(safeT, Math.max(0.18, t - 0.09));
         break;
       }
@@ -1198,9 +1196,9 @@ export class Engine {
       if (safeT < 1) break;
     }
     desired.lerp(pivot, 1 - safeT);
-    desired.y = Math.max(heightAt(desired.x, desired.z) + 0.82, desired.y);
+    desired.y = Math.max(heightAt(desired.x, desired.z) + CAMERA_GROUND_CLEARANCE, desired.y);
 
-    const follow = 1 - Math.exp(-(scoping ? 22 : 15) * Math.max(0, dt));
+    const follow = cameraFollowFactor(dt, scoping ? 22 : 15);
     cam.position.lerp(desired, follow);
     // Look directly at the upper-body pivot so yaw/pitch and movement agree.
     cam.lookAt(pivot);
