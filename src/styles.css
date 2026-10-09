@@ -312,7 +312,32 @@ body { position: fixed; inset: 0; }
 .game-scope .u{bottom:var(--g)}.game-scope .d{top:var(--g)}
 .game-scope .l{right:var(--g)}.game-scope .r{left:var(--g)}
 .game-scope.preview .u{bottom:auto;top:calc(-1 * (var(--g) + var(--l)))}.game-scope.preview .l{right:auto;left:calc(-1 * (var(--g) + var(--l)))}
-.game-hud,.game-topbar,.game-fps{zoom:var(--hud-scale,1)}
+.game-hud,.game-topbar,.game-fps{zoom:calc(var(--resolution-ui-scale,1) * var(--hud-scale,1))}
+
+/* Resolution-aware HUD sizing. The game stage owns the active aspect ratio,
+   so fixed-pixel reticles and status elements scale with the visible canvas
+   instead of remaining tiny or oversized when the stage changes dimensions. */
+.game-dot,
+.game-scope:not(.preview),
+.game-hitmarker,
+.game-prompt,
+.game-dead,
+.game-settings {
+  zoom: var(--resolution-ui-scale, 1);
+}
+.game-dot.game-dot-scoped {
+  width: 8px !important;
+  height: 8px !important;
+  min-width: 8px;
+  min-height: 8px;
+}
+.game-ui {
+  transform: none;
+  transform-origin: top left;
+}
+.game-stage {
+  container-type: size;
+}
 .settings-error{color:#ff8a8a;font-size:12px}
 .settings-keys{display:grid;gap:4px;margin:0}.settings-keys div{display:flex;justify-content:space-between;gap:12px}.settings-keys dt{font-weight:700}.settings-keys dd{margin:0;opacity:.8}
 .game-settings input[type=text]{background:#16181d;color:#fff;border:1px solid #444;padding:4px;width:100px}
