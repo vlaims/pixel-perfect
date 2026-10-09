@@ -130,11 +130,14 @@ export class Rig {
       this.rot("LeftLeg", 1.4, 0, 0);
       this.rot("RightLeg", 1.4, 0, 0);
     } else if (moving) {
-      // Directly mirrors the pasted demo's 0.6 leg swing and 0.3 arm swing.
-      this.rot("LeftUpLeg", -s * 0.3 * mv, 0, 0);
-      this.rot("RightUpLeg", s * 0.3 * mv, 0, 0);
-      this.rot("LeftLeg", s * 0.6 * mv, 0, 0);
-      this.rot("RightLeg", -s * 0.6 * mv, 0, 0);
+      // Distinct locomotion silhouettes: short crouch steps, careful ADS steps,
+      // a relaxed walk cycle, and a longer forward-driving sprint stride.
+      const stride = p.crouch ? 0.18 : a > 0.5 ? 0.22 : p.sprint ? 0.54 : 0.34;
+      const knee = p.crouch ? 0.28 : p.sprint ? 0.78 : 0.52;
+      this.rot("LeftUpLeg", -s * stride * mv, 0, 0);
+      this.rot("RightUpLeg", s * stride * mv, 0, 0);
+      this.rot("LeftLeg", Math.max(0, s) * knee * mv, 0, 0);
+      this.rot("RightLeg", Math.max(0, -s) * knee * mv, 0, 0);
     } else {
       this.rot("LeftUpLeg", 0, 0, 0);
       this.rot("RightUpLeg", 0, 0, 0);
@@ -142,11 +145,14 @@ export class Rig {
       this.rot("RightLeg", 0, 0, 0);
     }
 
-    // Upright FiveM-style torso/head with a small aim pitch.
-    this.rot("Spine", 0.025 * mv, 0, 0);
-    this.rot("Spine1", -p.pitch * 0.5 * a, 0, 0);
-    this.rot("Spine2", -p.pitch * 0.5 * a, 0, 0);
-    this.rot("Head", -p.pitch * 0.3, 0, 0);
+    // Layer a readable locomotion lean beneath the independent aim pose.
+    // Pitch is countered at the head so the character keeps looking ahead.
+    const forwardLean = p.crouch ? 0.16 : p.sprint && moving ? -0.14 : moving ? -0.055 : 0;
+    const lateralLean = moving && !p.crouch && a < 0.6 ? c * 0.025 * mv : 0;
+    this.rot("Spine", forwardLean + 0.025 * mv, 0, lateralLean);
+    this.rot("Spine1", -p.pitch * 0.38 * a + (p.sprint && moving ? 0.06 : 0), 0, lateralLean * 0.55);
+    this.rot("Spine2", -p.pitch * 0.62 * a, 0, lateralLean * 0.35);
+    this.rot("Head", -p.pitch * 0.3 - forwardLean * 0.45, 0, -lateralLean * 0.6);
 
     // Supplied controller keeps the weapon arm in a stable ready pose and
     // lets the opposite arm provide the visible locomotion swing.
@@ -160,10 +166,11 @@ export class Rig {
       this.rot("LeftArm", 0, -0.45 * q - 1.2 * a * (1 - q), -0.2 * q, "YXZ");
       this.rot("LeftForeArm", 0, -0.2 * q, 2.55 * q);
     } else if (moving) {
-      this.rot("LeftArm", -s * 0.3 * mv, -0.12 * a, -0.08 * a, "YXZ");
-      this.rot("LeftForeArm", 0, -(p.pistol ? 0.35 : 0.75) * a - 0.4 * (1 - a), 0);
+      const armSwing = p.crouch ? 0.10 : p.sprint ? 0.52 : 0.30;
+      this.rot("LeftArm", -s * armSwing * mv, -0.12 * a, -0.08 * a, "YXZ");
+      this.rot("LeftForeArm", 0, -(p.pistol ? 0.35 : 0.75) * a - (p.sprint ? 0.18 : 0.4) * (1 - a), 0);
     } else {
-      this.rot("LeftArm", 0.2 * (1 - a), -0.12 * a, -0.08 * a, "YXZ");
+      this.rot("LeftArm", (p.sprint ? 0 : 0.2) * (1 - a), -0.12 * a, -0.08 * a, "YXZ");
       this.rot("LeftForeArm", 0, -(p.pistol ? 0.35 : 0.75) * a - 0.4 * (1 - a), 0);
     }
 
