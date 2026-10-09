@@ -309,13 +309,45 @@ export class Engine {
     void this.sfx.ctx.close();
   }
 
-  resize(w: number, h: number, pr: number) {
-    this.width = w;
-    this.height = h;
-    this.renderer.setPixelRatio(Math.min(pr, 1.25));
-    this.renderer.setSize(w, h, false);
-    this.camera.aspect = w / h;
+  lastGood: { w: number; h: number; pr: number } | null = null;
+
+  /**
+   * Resize the drawing buffer. Returns the actual buffer size, or an error if the
+   * WebGL allocation failed (in which case the last working size is restored).
+   */
+  resize(w: number, h: number, pr: number): { ok: boolean; actualW: number; actualH: number; error?: string } {
+    const gl = this.renderer.getContext();
+    const apply = (ww: number, hh: number, rr: number) => {
+      this.renderer.setPixelRatio(rr);
+      this.renderer.setSize(ww, hh, false);
+      this.post?.setSize?.(Math.round(ww * rr), Math.round(hh * rr));
+    };
+    const want = { w: Math.round(w * pr), h: Math.round(h * pr) };
+    let error: string | undefined;
+    try {
+      apply(w, h, pr);
+      const err = gl.getError();
+      const buf = this.renderer.domElement;
+      if (err === gl.OUT_OF_MEMORY || gl.isContextLost()) error = "WebGL could not allocate this resolution";
+      else if (buf.width !== want.w || buf.height !== want.h) {
+        const max = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
+        if (want.w > max || want.h > max) error = `GPU limit is ${max}px per side`;
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Resize failed";
+    }
+    if (error && this.lastGood) {
+      try { apply(this.lastGood.w, this.lastGood.h, this.lastGood.pr); } catch {}
+    } else if (!error) {
+      this.lastGood = { w, h, pr };
+    }
+    const cur = this.lastGood ?? { w, h };
+    this.width = cur.w;
+    this.height = cur.h;
+    this.camera.aspect = cur.w / cur.h;
     this.camera.updateProjectionMatrix();
+    const buf = this.renderer.domElement;
+    return { ok: !error, actualW: buf.width, actualH: buf.height, error };
   }
 
   // ---------- input ----------
@@ -325,12 +357,12 @@ export class Engine {
       this.keys.add(code);
       const p = this.player;
       if (!p || !p.alive) return;
-      if (code === "Digit1" && !p.vehicle) this.switchWeapon(p, "ar");
-      if (code === "Digit2") this.switchWeapon(p, "pistol");
+      if (code === "Digit1") this.switchWeapon(p, "pistol");
+      if (code === "Digit2" && !p.vehicle) this.switchWeapon(p, "ar");
       if (code === "KeyR") this.reload(p);
       if (code === "KeyE") this.toggleVehicle(p);
-      if (code === "Space") this.rollEdge = true;
-      if (code === "KeyT" && this.mouseR) this.shoulder *= -1;
+      if (code === "Space" && this.mouseR) this.rollEdge = true;
+      if (code === "KeyT") this.shoulder *= -1;
     } else this.keys.delete(code);
   }
   onMouse(button: number, down: boolean) {
@@ -349,6 +381,7 @@ export class Engine {
   clearInput() {
     this.keys.clear();
     this.mouseL = this.mouseR = false;
+    this.shootEdge = this.rollEdge = false;
   }
 
   // ---------- actions ----------
