@@ -125,14 +125,18 @@ export class Rig {
       this.rot("RightUpLeg", -1.05 - 0.65 * tuck, 0, 0.14 * tuck);
       this.rot("LeftLeg", 1.55 + 0.35 * tuck, 0, 0);
       this.rot("RightLeg", 1.55 + 0.35 * tuck, 0, 0);
-      this.rot("Spine", 0.18, 0, 0);
-      this.rot("Spine1", -0.08, 0, 0);
-      this.rot("Spine2", -0.06, 0, 0);
-      this.rot("Head", -0.12, 0, 0);
-      this.rot("LeftArm", -0.65 - 0.25 * tuck, -0.4, -0.55, "YXZ");
-      this.rot("RightArm", -0.65 - 0.25 * tuck, 0.4, 0.55, "YXZ");
-      this.rot("LeftForeArm", 0.8, -0.2, 0);
-      this.rot("RightForeArm", 0.8, 0.2, 0);
+      // Full-body tuck: curl the trunk and head, pull both knees in, and wrap
+      // both arms across the chest while the actor pivot performs the side roll.
+      this.rot("Hips", 0.12 + 0.1 * tuck, 0, 0);
+      this.rot("Spine", 0.28 + 0.08 * tuck, 0, 0);
+      this.rot("Spine1", 0.16, 0, 0);
+      this.rot("Spine2", 0.10, 0, 0);
+      this.rot("Head", -0.24, 0, 0);
+      this.rot("Neck", -0.08, 0, 0);
+      this.rot("LeftArm", -0.95 - 0.18 * tuck, -0.30, -0.42, "YXZ");
+      this.rot("RightArm", -0.95 - 0.18 * tuck, 0.30, 0.42, "YXZ");
+      this.rot("LeftForeArm", 1.05, -0.22, -0.10);
+      this.rot("RightForeArm", 1.05, 0.22, 0.10);
       return;
     }
 
