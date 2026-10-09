@@ -1148,12 +1148,6 @@ export class Engine {
     const behind = this.keys.has("KeyV") && !this.mouseR;
     const yaw = this.camYaw + (behind ? Math.PI : 0);
     const pitch = clampCameraPitch(this.camPitch);
-    const cp = Math.cos(pitch);
-    const fx = Math.sin(yaw) * cp;
-    const fy = Math.sin(pitch);
-    const fz = Math.cos(yaw) * cp;
-    const rx = -Math.cos(yaw);
-    const rz = Math.sin(yaw);
     const scoping = this.mouseR && p.alive;
     let pivot: THREE.Vector3;
     let back: number;
