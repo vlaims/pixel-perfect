@@ -309,14 +309,15 @@ export class Engine {
     void this.sfx.ctx.close();
   }
 
-  lastGood: { w: number; h: number; pr: number } | null = null;
+  lastGood: { w: number; h: number; pr: number; aspect: number } | null = null;
 
   /**
-   * Resize the drawing buffer. Returns the actual buffer size, or an error if the
-   * WebGL allocation failed (in which case the last working size is restored).
+   * Resize the drawing buffer while keeping display aspect independent from
+   * internal render resolution. Failed allocations restore the last good size.
    */
-  resize(w: number, h: number, pr: number): { ok: boolean; actualW: number; actualH: number; error?: string } {
+  resize(w: number, h: number, pr: number, cameraAspect = w / h): { ok: boolean; actualW: number; actualH: number; error?: string } {
     const gl = this.renderer.getContext();
+    const requestedAspect = Number.isFinite(cameraAspect) && cameraAspect > 0 ? cameraAspect : w / h;
     const apply = (ww: number, hh: number, rr: number) => {
       this.renderer.setPixelRatio(rr);
       this.renderer.setSize(ww, hh, false);
@@ -331,7 +332,7 @@ export class Engine {
       if (err === gl.OUT_OF_MEMORY || gl.isContextLost()) error = "WebGL could not allocate this resolution";
       else if (buf.width !== want.w || buf.height !== want.h) {
         const max = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
-        if (want.w > max || want.h > max) error = `GPU limit is ${max}px per side`;
+        if (want.w > max || want.h > max) error = "GPU limit is " + max + "px per side";
       }
     } catch (e) {
       error = e instanceof Error ? e.message : "Resize failed";
@@ -339,12 +340,12 @@ export class Engine {
     if (error && this.lastGood) {
       try { apply(this.lastGood.w, this.lastGood.h, this.lastGood.pr); } catch {}
     } else if (!error) {
-      this.lastGood = { w, h, pr };
+      this.lastGood = { w, h, pr, aspect: requestedAspect };
     }
-    const cur = this.lastGood ?? { w, h };
+    const cur = this.lastGood ?? { w, h, aspect: requestedAspect };
     this.width = cur.w;
     this.height = cur.h;
-    this.camera.aspect = cur.w / cur.h;
+    this.camera.aspect = cur.aspect;
     this.camera.updateProjectionMatrix();
     const buf = this.renderer.domElement;
     return { ok: !error, actualW: buf.width, actualH: buf.height, error };
