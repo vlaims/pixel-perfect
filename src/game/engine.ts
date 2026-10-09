@@ -1195,12 +1195,12 @@ export class Engine {
     if (p.vehicle) {
       pivot = tv.set(p.vehicle.pos.x, p.vehicle.pos.y + (p.vehicle.kind === "car" ? 1.85 : 1.55), p.vehicle.pos.z);
       back = scoping ? p.vehicle.cfg.camBack * 0.78 : p.vehicle.cfg.camBack;
-      side = scoping ? 0.48 * this.shoulder : 0;
+      side = scoping ? -0.62 * this.shoulder : 0;
     } else {
       const pivotHeight = p.rolling > 0 ? 1.0 : p.crouching ? 1.08 : 1.48;
       pivot = tv.set(p.vis.x, p.vis.y + pivotHeight + p.recoilOffset, p.vis.z);
       back = scoping ? 2.15 : (this.keys.has("KeyC") ? 1.8 : 3.8);
-      side = (scoping ? 0.62 : 0.42) * this.shoulder;
+      side = (scoping ? -0.72 : -0.34) * this.shoulder;
     }
 
     const orbit = orbitCameraPosition(pivot, yaw, pitch, back, side, 0.12);
@@ -1233,8 +1233,16 @@ export class Engine {
 
     const follow = cameraFollowFactor(dt, scoping ? 22 : 15);
     cam.position.lerp(desired, follow);
-    // Look directly at the upper-body pivot so yaw/pitch and movement agree.
-    cam.lookAt(pivot);
+    // Aim downrange from a right-shoulder offset, not directly at the torso.
+    // Looking ahead shifts the player away from the reticle like a conventional
+    // over-the-shoulder action camera and prevents zoom from centering on their chest.
+    const lookTarget = pivot.clone();
+    if (scoping) {
+      lookTarget.x += Math.sin(yaw) * 3.4 + Math.cos(yaw) * 0.22 * this.shoulder;
+      lookTarget.z += Math.cos(yaw) * 3.4 - Math.sin(yaw) * 0.22 * this.shoulder;
+      lookTarget.y += Math.sin(pitch) * 0.18;
+    }
+    cam.lookAt(lookTarget);
 
     const st = settingsStore.get();
     const tiltTarget = st.cameraTilt && !scoping && p.rolling <= 0
@@ -1266,8 +1274,8 @@ export class Engine {
       a.root.rotation.y = a.vehicle ? a.vehicle.yaw : a.yaw;
       // Cars fully occlude the seated character to prevent mesh/roof clipping.
       a.rig.holder.visible = !(a.vehicle && a.vehicle.kind === "car");
-      a.phase += dt * (a.moving > 0 ? 8 * (a.input.sprint ? 2.2 : a.crouching ? 0.8 : 1.4) : 1.1);
-      const aimTarget = a.alive && (a.scoping || a.input.shoot || a.cooldown > -0.6) && a.radio < 0.5 ? 1 : 0;
+      a.phase += dt * (a.moving > 0.08 ? (a.input.sprint ? 9.8 : a.crouching ? 4.2 : a.scoping ? 6.0 : 6.8) : 1.0);
+      const aimTarget = a.alive && (a.scoping || a.input.shoot || (a.cooldown > -0.08 && a.cooldown <= 0)) && a.radio < 0.5 ? 1 : 0;
       a.aimBlend += (aimTarget - a.aimBlend) * (1 - Math.exp(-80 * dt));
 
       if (!a.alive) {
