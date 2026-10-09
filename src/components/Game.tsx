@@ -349,7 +349,18 @@ export function Game() {
             {lockError && <em role="alert">{lockError}</em>}
           </button>
         )}
-        <div className="game-ui" style={{ ["--hud-scale" as string]: String(settings.hudScale) }}>
+        <div
+          className="game-ui"
+          style={{
+            ["--hud-scale" as string]: String(settings.hudScale),
+            // Scale fixed-pixel HUD elements with the actual displayed game
+            // stage, not just the browser window. This keeps the reticle and
+            // interface proportionate across fullscreen, aspect ratios and sizes.
+            ["--resolution-ui-scale" as string]: String(
+              Math.max(0.65, Math.min(1.6, Math.min(stage.w / 1100, stage.h / 619))),
+            ),
+          }}
+        >
           <div className="game-topbar">
             <span className="game-title">PIXEL PERFECT</span>
             <span className="game-hint">CLICK TO PLAY · ESC MENU</span>
