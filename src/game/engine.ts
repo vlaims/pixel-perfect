@@ -830,19 +830,19 @@ export class Engine {
     }
     a.moving = Math.hypot(a.velocity.x, a.velocity.z);
 
-    // Third-person camera/body alignment: aiming tracks the camera immediately;
-    // while idle, the character smoothly catches up as the camera orbits.
-    // During locomotion, face travel direction unless actively aiming.
+    // GTA-style third-person body control:
+    // - free-look while standing does NOT rotate the body;
+    // - entering ADS/zoom smoothly aligns the torso and body to camera yaw;
+    // - outside ADS, moving turns the body toward the actual travel direction.
     if (a.rolling <= 0) {
-      let target = a.aimYaw;
-      if (len > 0 && !a.scoping) target = Math.atan2(dx, dz);
       if (a.scoping) {
-        a.yaw = lerpAngle(a.yaw, target, 1 - Math.exp(-30 * dt));
+        a.yaw = lerpAngle(a.yaw, a.aimYaw, 1 - Math.exp(-24 * dt));
       } else if (len > 0) {
-        a.yaw = lerpAngle(a.yaw, target, 1 - Math.exp(-18 * dt));
-      } else {
-        a.yaw = lerpAngle(a.yaw, a.aimYaw, 1 - Math.exp(-5.5 * dt));
+        const travelYaw = Math.atan2(dx, dz);
+        a.yaw = lerpAngle(a.yaw, travelYaw, 1 - Math.exp(-16 * dt));
       }
+      // Intentionally no idle-facing branch: free camera orbit leaves the
+      // character's body direction unchanged until zoom/aim is engaged.
     }
 
     // translate with step + obstacle checks
@@ -1477,6 +1477,16 @@ function makePreviewMannequin() {
   box(hips, seam, 0.088, 0.13, 0.035, -0.145, -0.20, 0.083);
   box(hips, pantsHi, 0.065, 0.012, 0.01, 0.145, -0.16, 0.104);
   box(hips, pantsHi, 0.065, 0.012, 0.01, -0.145, -0.16, 0.104);
+  // Rear belt loops, seat seams and roomy cargo pockets visible from the
+  // reference's over-the-shoulder/back view.
+  for (const side of [-1, 1]) {
+    box(hips, seam, 0.025, 0.055, 0.012, side * 0.105, 0.083, -0.104);
+    box(hips, pantsHi, 0.105, 0.105, 0.025, side * 0.145, -0.17, -0.095);
+    box(hips, seam, 0.11, 0.012, 0.008, side * 0.145, -0.115, -0.111);
+    box(hips, pantsHi, 0.075, 0.10, 0.018, side * 0.155, -0.205, 0.098);
+    box(hips, seam, 0.078, 0.009, 0.009, side * 0.155, -0.155, 0.109);
+  }
+  box(hips, seam, 0.012, 0.20, 0.008, 0, -0.12, -0.105);
 
   const spine = bone("Spine", hips, 0, 0.12, 0);
   mesh(spine, new THREE.CylinderGeometry(0.15, 0.19, 0.34, 16), tank, 0, 0.15, 0, 1, 1, 0.82);
@@ -1486,6 +1496,15 @@ function makePreviewMannequin() {
   mesh(spine2, new THREE.CylinderGeometry(0.064, 0.075, 0.045, 12), tankShade, 0, 0.16, 0);
   capsule(spine2, tank, 0.035, 0.15, 0.125, 0.02, 0, 0.78, 1, 0.8);
   capsule(spine2, tank, 0.035, 0.15, -0.125, 0.02, 0, 0.78, 1, 0.8);
+  // Tailored tank-top back panel, shoulder straps and subtle fabric folds.
+  const tankSeam = mat("#aaa99e");
+  box(spine, tankShade, 0.22, 0.012, 0.008, 0, 0.02, -0.158, 0.015);
+  box(spine1, tankShade, 0.19, 0.012, 0.008, 0, -0.005, -0.168, -0.025);
+  for (const side of [-1, 1]) {
+    box(spine2, tankSeam, 0.018, 0.15, 0.012, side * 0.112, 0.015, -0.125, side * -0.08);
+    box(spine, tankSeam, 0.075, 0.009, 0.008, side * 0.055, -0.025, -0.16, side * 0.12);
+  }
+  box(spine, tankShade, 0.14, 0.009, 0.008, 0, -0.005, -0.16, 0.04);
 
   const neck = bone("Neck", spine2, 0, 0.17, 0);
   capsule(neck, skin, 0.055, 0.07, 0, 0.035, 0);
@@ -1494,6 +1513,11 @@ function makePreviewMannequin() {
   mesh(head, new THREE.SphereGeometry(0.088, 16, 12), skin, 0, -0.014, 0.027, 0.86, 0.74, 0.86);
   mesh(head, new THREE.SphereGeometry(0.133, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.56), hair, 0, 0.102, -0.012, 1.04, 0.78, 1.03);
   mesh(head, new THREE.SphereGeometry(0.073, 14, 10), hairHi, 0.012, 0.158, 0.038, 1, 0.64, 0.8);
+  // Short tapered sides and a compact raised top, closer to the reference cut.
+  for (const side of [-1, 1]) {
+    mesh(head, new THREE.SphereGeometry(0.064, 12, 10), hair, side * 0.083, 0.075, -0.006, 0.55, 0.92, 0.92);
+  }
+  mesh(head, new THREE.SphereGeometry(0.075, 14, 10), hairHi, -0.008, 0.177, -0.012, 0.92, 0.40, 0.80);
   for (const side of [-1, 1]) {
     box(head, hair, 0.042, 0.011, 0.01, side * 0.046, 0.06, 0.105, -side * 0.06);
     mesh(head, new THREE.SphereGeometry(0.012, 8, 8), white, side * 0.046, 0.038, 0.111, 1, 0.9, 0.7);
