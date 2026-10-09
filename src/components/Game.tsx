@@ -356,21 +356,7 @@ export function Game() {
           </div>
 
           {scoped ? (
-            <div
-              className="game-scope"
-              aria-hidden="true"
-              style={{
-                ["--g" as string]: `${settings.scopeGap}px`,
-                ["--l" as string]: `${settings.scopeLength}px`,
-                ["--t" as string]: `${settings.scopeThickness}px`,
-                color: settings.scopeColor,
-              }}
-            >
-              <i className="u" />
-              <i className="d" />
-              <i className="l" />
-              <i className="r" />
-            </div>
+            <div className="game-dot game-dot-scoped" aria-hidden="true" />
           ) : (
             <div
               className="game-dot"
