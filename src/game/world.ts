@@ -101,25 +101,25 @@ export function buildWorld(scene: THREE.Scene) {
 
 
   // ----- Palette -----
-  const base = new THREE.MeshLambertMaterial({ color: "#686a68" });
+  const base = new THREE.MeshLambertMaterial({ color: "#8b9b79" });
   const asphalt = new THREE.MeshLambertMaterial({ color: "#26282c" });
   const asphaltPatch = new THREE.MeshLambertMaterial({ color: "#303237" });
-  const sidewalk = new THREE.MeshLambertMaterial({ color: "#888982" });
-  const curb = new THREE.MeshLambertMaterial({ color: "#b9b8ae" });
+  const sidewalk = new THREE.MeshLambertMaterial({ color: "#c3b9a2" });
+  const curb = new THREE.MeshLambertMaterial({ color: "#e1d7c2" });
   const white = new THREE.MeshBasicMaterial({ color: "#ece9dc" });
   const yellow = new THREE.MeshBasicMaterial({ color: "#d2b04b" });
   const concrete = new THREE.MeshLambertMaterial({ color: "#6a6d70" });
   const darkConcrete = new THREE.MeshLambertMaterial({ color: "#3b3e42" });
-  const glass = new THREE.MeshLambertMaterial({ color: "#385563" });
-  const glassLight = new THREE.MeshLambertMaterial({ color: "#60727a" });
+  const glass = new THREE.MeshLambertMaterial({ color: "#4f8797" });
+  const glassLight = new THREE.MeshLambertMaterial({ color: "#91bdc5" });
   const windowWarm = new THREE.MeshBasicMaterial({ color: "#b79a69" });
   const roof = new THREE.MeshLambertMaterial({ color: "#3a3b3c" });
-  const brick = new THREE.MeshLambertMaterial({ color: "#8b6150" });
-  const plaster = new THREE.MeshLambertMaterial({ color: "#7a7a72" });
-  const stucco = new THREE.MeshLambertMaterial({ color: "#6c6259" });
-  const treeGreen = new THREE.MeshLambertMaterial({ color: "#2f623c" });
-  const treeDark = new THREE.MeshLambertMaterial({ color: "#22472c" });
-  const trunk = new THREE.MeshLambertMaterial({ color: "#60462f" });
+  const brick = new THREE.MeshLambertMaterial({ color: "#bd6652" });
+  const plaster = new THREE.MeshLambertMaterial({ color: "#e2bba0" });
+  const stucco = new THREE.MeshLambertMaterial({ color: "#78a9a1" });
+  const treeGreen = new THREE.MeshLambertMaterial({ color: "#347e45" });
+  const treeDark = new THREE.MeshLambertMaterial({ color: "#245d38" });
+  const trunk = new THREE.MeshLambertMaterial({ color: "#795238" });
   const lamp = new THREE.MeshBasicMaterial({ color: "#ffe2a1" });
   const red = new THREE.MeshBasicMaterial({ color: "#b52d2d" });
 
@@ -264,7 +264,7 @@ export function buildWorld(scene: THREE.Scene) {
   const balconyGeo = new THREE.BoxGeometry(1.8, 0.10, 0.75);
   const balconyRailGeo = new THREE.BoxGeometry(1.8, 0.42, 0.055);
   const shutterGeo = new THREE.BoxGeometry(0.05, 0.42, 0.72);
-  const colors = ["#676a6d","#756d63","#5d6367","#81786f","#625d59","#747a78","#6b625c","#50585c"];
+  const colors = ["#e5a56e","#e18b78","#70a8b0","#e2c16e","#8ba9d1","#c58db0","#9bbd8a","#dfd0b7"];
 
   const addGlass = (
     geometry: THREE.BufferGeometry,
@@ -438,34 +438,44 @@ export function buildWorld(scene: THREE.Scene) {
   scene.add(poles, lamps);
 
   // Trees: layered low-poly crowns instead of single smooth spheres.
-  const trunkGeo = new THREE.CylinderGeometry(0.15, 0.20, 2.2, 7);
-  const crownGeo = new THREE.IcosahedronGeometry(0.92, 1);
-  const crownTopGeo = new THREE.IcosahedronGeometry(0.65, 1);
+  // Low-poly palms match the warm, colorful street reference without heavy assets.
+  const trunkGeo = new THREE.CylinderGeometry(0.13, 0.18, 4.35, 7);
+  const crownGeo = new THREE.IcosahedronGeometry(0.28, 0);
+  const frondGeo = new THREE.BoxGeometry(0.13, 0.075, 2.45);
   const trunks = makeInstanced(trunkGeo, trunk, 34);
-  const crowns = makeInstanced(crownGeo, treeGreen, 34);
-  const crownsTop = makeInstanced(crownTopGeo, treeDark, 34);
+  const crowns = makeInstanced(crownGeo, treeDark, 34);
+  const fronds = makeInstanced(frondGeo, treeGreen, 34 * 7);
   let ti = 0;
+  let fi = 0;
   for (const x of [-101, -53, -5, 43, 91]) {
     for (const z of [-102, -54, -6, 42, 90]) {
       if (ti >= 34) break;
       if ((Math.abs(x) < 10 && Math.abs(z) < 10) || rand() < 0.25) continue;
       const tx = x + (rand() - 0.5) * 2;
       const tz = z + (rand() - 0.5) * 2;
-      mi.compose(new THREE.Vector3(tx, 1.1, tz), mq, ms);
+      mi.compose(new THREE.Vector3(tx, 2.17, tz), mq, ms);
       trunks.setMatrixAt(ti, mi);
-      mi.compose(new THREE.Vector3(tx, 2.85, tz), mq, new THREE.Vector3(1.0, 0.88, 1.0));
+      mi.compose(new THREE.Vector3(tx, 4.35, tz), mq, ms);
       crowns.setMatrixAt(ti, mi);
-      mi.compose(new THREE.Vector3(tx + 0.12, 3.65, tz - 0.05), mq, new THREE.Vector3(0.78, 0.72, 0.78));
-      crownsTop.setMatrixAt(ti, mi);
+      for (let f = 0; f < 7; f++) {
+        const angle = f * Math.PI * 2 / 7 + ti * 0.23;
+        const lx = tx + Math.sin(angle) * 0.82;
+        const lz = tz + Math.cos(angle) * 0.82;
+        const rot = new THREE.Euler(0.34 + (f % 2) * 0.08, angle, 0.08 * Math.sin(angle));
+        mq.setFromEuler(rot);
+        mi.compose(new THREE.Vector3(lx, 4.22 - (f % 3) * 0.04, lz), mq, ms);
+        fronds.setMatrixAt(fi++, mi);
+      }
       ti++;
     }
     if (ti >= 34) break;
   }
-  trunks.count = crowns.count = crownsTop.count = ti;
+  trunks.count = crowns.count = ti;
+  fronds.count = fi;
   trunks.instanceMatrix.needsUpdate = true;
   crowns.instanceMatrix.needsUpdate = true;
-  crownsTop.instanceMatrix.needsUpdate = true;
-  scene.add(trunks, crowns, crownsTop);
+  fronds.instanceMatrix.needsUpdate = true;
+  scene.add(trunks, crowns, fronds);
 
   // ----- Low-cost Zona Leste visual details -----
   // Overhead utility wiring gives the streets a denser residential/commercial silhouette.
