@@ -380,7 +380,7 @@ export class Engine {
   onLook(dx: number, dy: number) {
     const s = 0.0022 * settingsStore.get().sensitivity * (this.mouseR ? 0.7 : 1);
     this.camYaw -= dx * s;
-    this.camPitch = Math.max(-1.2, Math.min(1.1, this.camPitch - dy * s));
+    this.camPitch = clampCameraPitch(this.camPitch - dy * s);
     this.screenRotationVelocity = THREE.MathUtils.lerp(this.screenRotationVelocity, dx * 0.003, 0.2);
   }
   clearInput() {
