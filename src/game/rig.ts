@@ -149,10 +149,10 @@ export class Rig {
     // Pitch is countered at the head so the character keeps looking ahead.
     const forwardLean = p.crouch ? 0.16 : p.sprint && moving ? -0.14 : moving ? -0.055 : 0;
     const lateralLean = moving && !p.crouch && a < 0.6 ? c * 0.025 * mv : 0;
-    this.rot("Spine", forwardLean + 0.025 * mv, 0, lateralLean);
+    this.rot("Spine", forwardLean + 0.025 * mv + idle * 0.012, 0, lateralLean + idle * 0.008);
     this.rot("Spine1", -p.pitch * 0.38 * a + (p.sprint && moving ? 0.06 : 0), 0, lateralLean * 0.55);
     this.rot("Spine2", -p.pitch * 0.62 * a, 0, lateralLean * 0.35);
-    this.rot("Head", -p.pitch * 0.3 - forwardLean * 0.45, 0, -lateralLean * 0.6);
+    this.rot("Head", -p.pitch * 0.3 - forwardLean * 0.45 + idle * 0.012, idle * 0.018, -lateralLean * 0.6 - idle * 0.012);
 
     // Supplied controller keeps the weapon arm in a stable ready pose and
     // lets the opposite arm provide the visible locomotion swing.
