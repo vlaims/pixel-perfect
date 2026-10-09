@@ -1227,7 +1227,7 @@ export class Engine {
       a.root.rotation.y = a.vehicle ? a.vehicle.yaw : a.yaw;
       // Cars fully occlude the seated character to prevent mesh/roof clipping.
       a.rig.holder.visible = !(a.vehicle && a.vehicle.kind === "car");
-      a.phase += dt * (a.moving > 0 ? 8 * (a.input.sprint ? 2.2 : a.crouching ? 0.8 : 1.4) : 0);
+      a.phase += dt * (a.moving > 0 ? 8 * (a.input.sprint ? 2.2 : a.crouching ? 0.8 : 1.4) : 1.1);
       const aimTarget = a.alive && (a.scoping || a.input.shoot || a.cooldown > -0.6) && a.radio < 0.5 ? 1 : 0;
       a.aimBlend += (aimTarget - a.aimBlend) * (1 - Math.exp(-80 * dt));
 
